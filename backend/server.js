@@ -226,6 +226,79 @@ app.get('/api/user/recently-played', async (req, res) => {
   }
 });
 
+// Get track by ID (for album art)
+app.get('/api/tracks/:id', async (req, res) => {
+  const access_token = req.headers.authorization?.replace('Bearer ', '');
+  const trackId = req.params.id;
+  
+  if (!access_token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  try {
+    const response = await axios.get(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: {
+        'Authorization': `Bearer ${access_token}`
+      }
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching track:', error.response?.data || error.message);
+    res.status(401).json({ error: 'Failed to fetch track' });
+  }
+});
+
+// Get artist by ID (for artist images)
+app.get('/api/artists/:id', async (req, res) => {
+  const access_token = req.headers.authorization?.replace('Bearer ', '');
+  const artistId = req.params.id;
+  
+  if (!access_token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  try {
+    const response = await axios.get(`https://api.spotify.com/v1/artists/${artistId}`, {
+      headers: {
+        'Authorization': `Bearer ${access_token}`
+      }
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching artist:', error.response?.data || error.message);
+    res.status(401).json({ error: 'Failed to fetch artist' });
+  }
+});
+
+// Get multiple artists at once (bulk) - using Spotify's Get Several Artists endpoint
+app.get('/api/artists/bulk', async (req, res) => {
+  const access_token = req.headers.authorization?.replace('Bearer ', '');
+  const { ids } = req.query;
+  
+  if (!access_token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  if (!ids || typeof ids !== 'string') {
+    return res.status(400).json({ error: 'Artist IDs required as query parameter (ids=id1,id2,id3)' });
+  }
+  
+  try {
+    const response = await axios.get(`https://api.spotify.com/v1/artists?ids=${ids}`, {
+      headers: {
+        'Authorization': `Bearer ${access_token}`
+      }
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching artists:', error.response?.data || error.message);
+    res.status(401).json({ error: 'Failed to fetch artists' });
+  }
+});
+
 // Get user stats summary
 app.get('/api/user/stats', async (req, res) => {
   const access_token = req.headers.authorization?.replace('Bearer ', '');

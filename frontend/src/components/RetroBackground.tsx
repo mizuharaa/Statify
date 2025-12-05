@@ -1,193 +1,212 @@
 import { motion } from 'motion/react';
-import chiikawaSticker from 'figma:asset/d7f27a0b2ce402b4b9e7d1603d277d42637dd846.png';
-import sakuraBranch from 'figma:asset/7ccdefcb7623b22c61cc550b65df61df057644d7.png';
-import sakuraPetal from 'figma:asset/94b62a74a4091ec490d3376543e55674f2372946.png';
 
 export function RetroBackground() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Illustrated Sakura Branches - like scanned stickers */}
-      <motion.img
-        src={sakuraBranch}
-        alt=""
-        className="absolute top-0 right-0 w-1/4 opacity-40 sticker-shadow"
-        style={{ transform: 'scaleX(-1)', mixBlendMode: 'multiply', filter: 'saturate(1.2) brightness(1.1)' }}
+      {/* Paper texture overlay for retro feel */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E")`,
+          mixBlendMode: 'multiply',
+        }}
+      />
+      
+      {/* Minimalist Japanese Landscape Background - inspired by attachment 4 */}
+      <div 
+        className="absolute inset-0"
+        style={{
+          background: `
+            linear-gradient(180deg, 
+              rgba(255, 245, 235, 0.95) 0%,
+              rgba(255, 233, 214, 0.9) 25%,
+              rgba(255, 218, 185, 0.85) 50%,
+              rgba(255, 233, 214, 0.9) 75%,
+              rgba(255, 245, 235, 0.95) 100%
+            ),
+            radial-gradient(ellipse at 20% 30%, rgba(173, 216, 230, 0.3) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 70%, rgba(255, 182, 193, 0.2) 0%, transparent 50%)
+          `,
+        }}
+      />
+      
+      {/* Stylized mountains - low poly style */}
+      <svg className="absolute bottom-0 left-0 w-full h-2/3 opacity-40" viewBox="0 0 1200 800" preserveAspectRatio="none">
+        <polygon points="0,800 200,600 400,650 600,550 800,600 1000,500 1200,550 1200,800" 
+          fill="rgba(105, 105, 105, 0.2)" 
+          style={{ mixBlendMode: 'multiply' }}
+        />
+        <polygon points="0,800 150,700 300,750 500,650 700,700 900,600 1100,650 1200,600 1200,800" 
+          fill="rgba(128, 128, 128, 0.15)" 
+          style={{ mixBlendMode: 'multiply' }}
+        />
+      </svg>
+
+      {/* Retro Anime Stickers/Posters - Right Side */}
+      <div className="fixed right-4 top-1/4 z-40 hidden xl:flex flex-col gap-6">
+        {/* Retro Anime Poster 1 - Future/VR style */}
+        <motion.div
+          animate={{
+            y: [0, -8, 0],
+            rotate: [0, -2, 2, 0],
+          }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+          }}
+          className="sticker-shadow"
+        >
+          <div 
+            className="w-32 h-40 rounded-lg border-4 border-yellow-400 shadow-2xl relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6347 100%)',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3)',
+            }}
+          >
+            <div className="absolute inset-0 p-2 flex flex-col items-center justify-center text-center">
+              <div className="text-2xl font-bold text-white mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+                FUTURE
+              </div>
+              <div className="text-xs text-white opacity-90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
+                未来
+              </div>
+              <div className="mt-2 w-12 h-12 rounded-full bg-blue-400 border-2 border-white"></div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Retro Bodega Sign Style */}
+        <motion.div
+          animate={{
+            rotate: [-3, 3, -3],
+            y: [0, 5, 0],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            delay: 1,
+          }}
+          className="sticker-shadow"
+        >
+          <div 
+            className="w-36 h-20 rounded-lg border-3 border-red-500 shadow-xl relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)',
+              boxShadow: '0 6px 12px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.4)',
+            }}
+          >
+            <div className="absolute inset-0 p-2 flex flex-col items-center justify-center">
+              <div className="text-lg font-black text-red-600" style={{ 
+                textShadow: '2px 2px 0px white, 4px 4px 0px rgba(0,0,0,0.2)',
+                letterSpacing: '2px',
+              }}>
+                STATIFY
+              </div>
+              <div className="text-xs text-red-700 font-bold mt-1">24/7 MUSIC</div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Retro Japanese Movie Poster Style */}
+        <motion.div
+          animate={{
+            y: [0, -6, 0],
+            rotate: [0, 1, -1, 0],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            delay: 2,
+          }}
+          className="sticker-shadow"
+        >
+          <div 
+            className="w-28 h-36 rounded-lg border-3 border-blue-600 shadow-2xl relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(180deg, #87CEEB 0%, #4682B4 50%, #1E3A5F 100%)',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
+            }}
+          >
+            <div className="absolute inset-0 p-2 flex flex-col items-center justify-center text-center">
+              <div className="text-white text-xs font-bold mb-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+                音楽
+              </div>
+              <div className="text-white text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+                MUSIC
+              </div>
+              <div className="mt-2 w-8 h-8 rounded-full bg-yellow-300 border border-white"></div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Left Side - Bodega Style Elements */}
+      <div className="fixed left-4 top-1/3 z-40 hidden xl:flex flex-col gap-6">
+        {/* Bodega "OPEN" Sign */}
+        <motion.div
+          animate={{
+            opacity: [1, 0.7, 1],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+          }}
+          className="sticker-shadow"
+        >
+          <div 
+            className="w-24 h-24 rounded-full border-4 border-green-500 shadow-xl flex items-center justify-center"
+            style={{
+              background: 'radial-gradient(circle, #90EE90 0%, #32CD32 100%)',
+              boxShadow: '0 6px 12px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4)',
+            }}
+          >
+            <div className="text-white font-black text-sm" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+              OPEN
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Retro Cassette Tape */}
+        <motion.div
+          animate={{
+            rotate: [-2, 2, -2],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+          }}
+          className="sticker-shadow"
+        >
+          <div 
+            className="w-20 h-14 rounded border-2 border-pink-400 shadow-lg relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #FFB6C1 0%, #FF69B4 100%)',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div className="absolute inset-1 border border-white/50 rounded"></div>
+            <div className="absolute top-2 left-2 right-2 h-1 bg-white/30 rounded"></div>
+            <div className="absolute bottom-2 left-2 right-2 h-1 bg-white/30 rounded"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/20 border border-white/50"></div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Floating Retro Elements */}
+      <motion.div
+        className="absolute top-1/4 left-1/4 opacity-20 hidden lg:block"
         animate={{
-          rotate: [0, -1, 1, 0],
-          y: [0, -5, 0],
+          y: [0, -20, 0],
+          rotate: [0, 10, -10, 0],
         }}
         transition={{
           duration: 8,
           repeat: Infinity,
         }}
-      />
-
-      <motion.img
-        src={sakuraBranch}
-        alt=""
-        className="absolute top-20 left-0 w-1/4 opacity-40 sticker-shadow"
-        style={{ mixBlendMode: 'multiply', filter: 'saturate(1.2) brightness(1.1)' }}
-        animate={{
-          rotate: [0, 1, -1, 0],
-          y: [0, 5, 0],
-        }}
-        transition={{
-          duration: 9,
-          repeat: Infinity,
-          delay: 1,
-        }}
-      />
-
-      {/* Drifting Sakura Petals - slower parallax */}
-      {[...Array(25)].map((_, i) => (
-        <motion.img
-          key={`petal-${i}`}
-          src={sakuraPetal}
-          alt=""
-          className="absolute"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `-5%`,
-            width: `${14 + Math.random() * 18}px`,
-            opacity: 0.4 + Math.random() * 0.3,
-            mixBlendMode: 'multiply',
-            filter: 'saturate(1.3)',
-          }}
-          animate={{
-            y: ['0vh', '110vh'],
-            x: [0, (Math.random() - 0.5) * 100],
-            rotate: [0, Math.random() * 360],
-            opacity: [0, 0.7, 0.7, 0.3, 0],
-          }}
-          transition={{
-            duration: 15 + Math.random() * 20,
-            repeat: Infinity,
-            delay: Math.random() * 15,
-            ease: 'linear',
-          }}
-        />
-      ))}
-
-      {/* Anime Mascot - Chiikawa as retro sticker */}
-      <motion.div
-        className="absolute top-24 right-12 w-24 md:w-32 cursor-pointer pointer-events-auto sticker-shadow"
-        whileHover={{ 
-          scale: 1.15, 
-          rotate: [0, -5, 5, -5, 0],
-          y: -8,
-          transition: { duration: 0.6 }
-        }}
-        animate={{
-          y: [0, -10, 0],
-          rotate: [0, -1, 1, 0],
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-        }}
       >
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-300 to-purple-300 blur-xl opacity-30 rounded-2xl" />
-          <img 
-            src={chiikawaSticker} 
-            alt="Chiikawa" 
-            className="relative w-full rounded-2xl border-3 border-white shadow-xl" 
-            style={{ filter: 'saturate(1.2) brightness(1.05)' }}
-          />
+        <div className="w-16 h-16 rounded-lg border-2 border-yellow-400 bg-yellow-200/50 flex items-center justify-center">
+          <span className="text-2xl">🎵</span>
         </div>
-      </motion.div>
-
-      {/* Floating Pixel Icons */}
-      <motion.div
-        className="absolute top-1/4 left-10 opacity-60 hidden lg:block"
-        animate={{
-          y: [0, -15, 0],
-          rotate: [0, 5, -5, 0],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-        }}
-      >
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="#FFB3D9">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
-      </motion.div>
-
-      <motion.div
-        className="absolute top-1/3 right-20 opacity-60 hidden lg:block"
-        animate={{
-          y: [0, 15, 0],
-          rotate: [0, -5, 5, 0],
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          delay: 1,
-        }}
-      >
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="#A5D8FF">
-          <circle cx="12" cy="12" r="10"/>
-          <circle cx="12" cy="12" r="6" fill="white" opacity="0.3"/>
-        </svg>
-      </motion.div>
-
-      {/* Retro Japanese Text Labels - like web stickers */}
-      <motion.div
-        className="absolute top-1/2 left-8 hidden xl:block"
-        animate={{
-          rotate: [-3, 3, -3],
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-        }}
-      >
-        <div className="bg-white/90 backdrop-blur-sm px-5 py-3 rounded-lg border-3 border-pink-300 shadow-xl rotate-6" style={{
-          boxShadow: '0 4px 0 #FFB3D9, 0 8px 20px rgba(255, 105, 180, 0.3), inset 0 2px 0 rgba(255,255,255,0.8)',
-        }}>
-          <div className="pixel-font text-xs" style={{ color: '#FF69B4' }}>音楽♪</div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        className="absolute bottom-1/3 right-16 hidden xl:block"
-        animate={{
-          rotate: [3, -3, 3],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          delay: 1.5,
-        }}
-      >
-        <div className="bg-white/90 backdrop-blur-sm px-5 py-3 rounded-lg border-3 border-blue-300 shadow-xl -rotate-6" style={{
-          boxShadow: '0 4px 0 #A5D8FF, 0 8px 20px rgba(165, 216, 255, 0.3), inset 0 2px 0 rgba(255,255,255,0.8)',
-        }}>
-          <div className="pixel-font text-xs" style={{ color: '#5CA8E8' }}>レトロ✦</div>
-        </div>
-      </motion.div>
-
-      {/* Cassette Tape Pixel Art */}
-      <motion.div
-        className="absolute bottom-40 left-20 hidden lg:block opacity-50"
-        animate={{
-          y: [0, -8, 0],
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-        }}
-      >
-        <svg width="60" height="40" viewBox="0 0 60 40">
-          <rect x="2" y="5" width="56" height="30" rx="3" fill="#FFB3D9" stroke="#FF69B4" strokeWidth="2"/>
-          <rect x="5" y="8" width="50" height="24" fill="white" opacity="0.3"/>
-          <circle cx="18" cy="20" r="8" fill="#000" opacity="0.6"/>
-          <circle cx="42" cy="20" r="8" fill="#000" opacity="0.6"/>
-          <circle cx="18" cy="20" r="4" fill="white" opacity="0.3"/>
-          <circle cx="42" cy="20" r="4" fill="white" opacity="0.3"/>
-          <rect x="14" y="18" width="32" height="4" fill="#8B4513" opacity="0.5"/>
-        </svg>
       </motion.div>
     </div>
   );

@@ -95,61 +95,7 @@ export function SideDecor() {
         </motion.div>
       </div>
 
-      {/* Right Side Decor */}
-      <div className="fixed right-4 top-1/3 z-40 hidden xl:flex flex-col gap-6">
-        {/* Anime Girl Sticker Placeholder */}
-        <motion.div
-          animate={{
-            y: [0, -8, 0],
-            rotate: [0, -2, 2, 0],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-          }}
-          className="sticker-shadow"
-        >
-          <div className="w-24 h-32 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 rounded-2xl border-3 border-white shadow-xl flex items-center justify-center">
-            <span className="text-4xl">♪</span>
-          </div>
-        </motion.div>
-
-        {/* Pixel Heart */}
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-          }}
-        >
-          <svg width="40" height="40" viewBox="0 0 24 24">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
-              fill="#FFB3D9" 
-              stroke="#FF69B4" 
-              strokeWidth="2"/>
-          </svg>
-        </motion.div>
-
-        {/* 90s Toy Sticker */}
-        <motion.div
-          animate={{
-            rotate: [-5, 5, -5],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-          }}
-        >
-          <div className="bg-white/90 p-2 rounded-lg border-2 border-pink-200 shadow-lg">
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="#FFB3D9">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              <circle cx="12" cy="12" r="4" fill="white" opacity="0.5"/>
-            </svg>
-          </div>
-        </motion.div>
-      </div>
+      {/* Right Side Decor - Moved to RetroBackground */}
     </>
   );
 }
