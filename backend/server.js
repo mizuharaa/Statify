@@ -1,21 +1,30 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
 const querystring = require('querystring');
-require('dotenv').config({ path: '../configs.env' });
+
+// Load env from Statify/configs.env (works regardless of cwd)
+require('dotenv').config({ path: path.join(__dirname, '../configs.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true })); // Allow all origins (localhost:3000, 3001, 127.0.0.1, etc.)
 app.use(express.json());
 
 // Spotify OAuth configuration
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:3000/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const REDIRECT_URI = process.env.REDIRECT_URI || 'http://127.0.0.1:5000/api/auth/callback';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://127.0.0.1:3000';
+
+// Startup check — fail fast if credentials missing
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.error('ERROR: CLIENT_ID or CLIENT_SECRET missing. Check Statify/configs.env');
+  process.exit(1);
+}
 
 // Generate random string for state
 const generateRandomString = (length) => {
