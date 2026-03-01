@@ -1,13 +1,13 @@
-# 🎵 Statify - Your Retro 90s Japanese Spotify Wrapped Clone ✨
+# 🎵 Statify — Your Music. Recorded.
 
 <div align="center">
 
-![Statify Logo](https://img.shields.io/badge/Statify-Retro%2090s%20Japanese-FFB3D9?style=for-the-badge)
+![Statify](https://img.shields.io/badge/Statify-Broadcast%20FM-D4A843?style=for-the-badge)
 ![Spotify](https://img.shields.io/badge/Spotify-1DB954?style=for-the-badge&logo=spotify&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 
-**Discover your music stats with a funky retro 90s Japanese aesthetic! 🎌**
+**Tune into your Spotify stats. See your top artists, tracks, and listening time — beautifully visualized.**
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [API Reference](#-api-reference)
 
@@ -17,28 +17,28 @@
 
 ## ✨ Features
 
-### 🎨 **Retro 90s Japanese Aesthetic**
-- Beautiful pastel gradients and neon glows
-- Windows XP-style UI elements
-- Funky Japanese-inspired design
-- Smooth animations and transitions
+### 📻 **Broadcast / Vintage Aesthetic**
+- Dark theme with warm gold accents (`#0F0D0B`, `#D4A843`)
+- Cassette tape and reel-inspired visuals
+- Clean typography (Bebas Neue, Playfair Display, DM Sans, IBM Plex Mono)
+- Smooth scroll-reveal animations
 
-### 📊 **Comprehensive Music Statistics**
-- 🎤 **Top 5 Most Streamed Artists** - See your favorite artists from the past year
-- 🎵 **Top 5 Most Streamed Tracks** - Discover your most played songs
-- ⏱️ **Total Minutes Listened** - Track your listening time
-- 🎭 **Unique Artists Count** - See how diverse your music taste is
-- 📈 **Total Tracks Played** - Count of all your recent plays
+### 📊 **Music Statistics**
+- **Top 5 Artists** — With images and listening time
+- **Top 5 Tracks** — Album art, artist credits, duration
+- **Total Minutes Listened** — Your listening time
+- **Unique Artists Count** — How diverse your taste is
+- **Total Tracks Played** — Recent play count
 
-### 🔐 **Secure Spotify OAuth Integration**
-- Safe and secure authentication flow
+### 🔐 **Spotify OAuth**
+- Secure authentication flow
 - Automatic token refresh
-- Seamless user experience
+- No password stored
 
-### 🎯 **User-Friendly Interface**
-- Clean, intuitive navigation
-- Responsive design for all devices
-- Beautiful visualizations of your music data
+### 🎯 **Responsive UI**
+- Container-based layout (max-width 1200px)
+- Mobile-friendly grids and navigation
+- Demo preview of top 5 artists on the landing page
 
 ---
 
@@ -46,9 +46,8 @@
 
 ### Prerequisites
 - Node.js (v16 or higher)
-- npm or yarn
-- Spotify Developer Account
-- Spotify App credentials (Client ID & Client Secret)
+- npm
+- [Spotify Developer Account](https://developer.spotify.com/dashboard) and app credentials
 
 ### Step 1: Clone the Repository
 ```bash
@@ -68,23 +67,23 @@ cd backend
 npm install
 ```
 
-3. Configure your Spotify credentials in `../configs.env`:
+3. Create `configs.env` in the **Statify root** (one level up from `backend`):
 ```env
 CLIENT_ID=your_spotify_client_id
 CLIENT_SECRET=your_spotify_client_secret
-REDIRECT_URI=http://localhost:5000/api/auth/callback
-FRONTEND_URL=http://localhost:3000
+REDIRECT_URI=http://127.0.0.1:5000/api/auth/callback
+FRONTEND_URL=http://127.0.0.1:3000
 PORT=5000
 ```
 
-4. Start the backend server:
+4. Start the backend:
 ```bash
 npm start
-# or for development with auto-reload:
+# or with auto-reload:
 npm run dev
 ```
 
-The backend will run on `http://localhost:5000` 🎵
+Backend runs on **http://127.0.0.1:5000**
 
 ### Step 3: Set Up Frontend
 
@@ -98,201 +97,116 @@ cd ../frontend
 npm install
 ```
 
-3. Start the development server:
+3. Start the dev server:
 ```bash
 npm run dev
 ```
 
-The frontend will run on `http://localhost:3000` ✨
+Frontend runs on **http://localhost:3000** (or 3001/3002 if 3000 is in use). Update `FRONTEND_URL` in `configs.env` to match.
 
 ### Step 4: Configure Spotify App
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Create a new app
-3. Add `http://localhost:5000/api/auth/callback` to your Redirect URIs
-4. Copy your Client ID and Client Secret to `configs.env`
+2. Create an app (or use an existing one)
+3. In **Settings → Redirect URIs**, add exactly:
+   ```
+   http://127.0.0.1:5000/api/auth/callback
+   ```
+4. Copy **Client ID** and **Client Secret** into `Statify/configs.env`
 
 ---
 
 ## 📖 Usage
 
-### 🎯 Getting Started
+### Getting Started
 
-1. **Start Both Servers**
-   - Backend: `cd backend && npm start`
-   - Frontend: `cd frontend && npm run dev`
+1. **Start both servers**
+   - Terminal 1: `cd Statify/backend && node server.js`
+   - Terminal 2: `cd Statify/frontend && npm run dev`
 
-2. **Open Your Browser**
-   - Navigate to `http://localhost:3000`
+2. **Open the app**
+   - Go to `http://localhost:3000` (or the port Vite shows)
 
-3. **Connect Your Spotify Account**
-   - Click the **"Connect Spotify"** button 🎵
-   - Authorize the app on Spotify's OAuth page
-   - You'll be redirected back to Statify
+3. **Connect Spotify**
+   - Click **Connect Spotify**
+   - Authorize on Spotify’s page
+   - You’ll be redirected back to Statify
 
-4. **View Your Stats**
-   - After connecting, click **"See Your Stats Now!"** ✨
-   - Explore your personalized dashboard with all your music statistics!
+4. **View your stats**
+   - Click **See Your Stats**
+   - Browse your dashboard: top artists, tracks, and listening metrics
 
-### 🎨 Dashboard Features
+### Dashboard
 
-#### 📊 Overview Cards
-- **Total Minutes Listened** - Your listening time ⏱️
-- **Unique Artists Count** - Number of different artists you've listened to 🎤
-- **Total Tracks Played** - Count of all your recent plays 🎵
-
-#### 🎤 Top 5 Artists
-- Beautiful cards showing your most streamed artists
-- Click any artist to open their Spotify page
-- Images and names displayed in retro style
-
-#### 🎵 Top 5 Tracks
-- List of your most played songs
-- Album artwork and artist information
-- Direct links to Spotify tracks
+- **Hero Artist Card** — Your #1 artist with photo and minutes
+- **Stats Row** — Total minutes, unique artists, tracks played, hours listened
+- **Top Artists Grid** — All 5 with images and links to Spotify
+- **Tracklist** — Top 5 tracks with album art and duration
 
 ---
 
 ## 🔧 API Reference
 
-### Backend Endpoints
-
-#### `GET /api/auth/login`
-Initiates Spotify OAuth flow.
-- **Response**: `{ authUrl: string }`
-
-#### `GET /api/auth/callback`
-Handles OAuth callback from Spotify.
-- **Query Params**: `code`, `state`
-- **Redirects**: To frontend with tokens
-
-#### `POST /api/auth/refresh`
-Refreshes access token.
-- **Body**: `{ refresh_token: string }`
-- **Response**: `{ access_token: string, refresh_token: string }`
-
-#### `GET /api/user/profile`
-Gets user profile information.
-- **Headers**: `Authorization: Bearer <access_token>`
-- **Response**: User profile object
-
-#### `GET /api/user/top-artists`
-Gets user's top artists.
-- **Headers**: `Authorization: Bearer <access_token>`
-- **Query Params**: `time_range` (short_term, medium_term, long_term)
-- **Response**: Top artists array
-
-#### `GET /api/user/top-tracks`
-Gets user's top tracks.
-- **Headers**: `Authorization: Bearer <access_token>`
-- **Query Params**: `time_range` (short_term, medium_term, long_term)
-- **Response**: Top tracks array
-
-#### `GET /api/user/stats`
-Gets comprehensive user statistics.
-- **Headers**: `Authorization: Bearer <access_token>`
-- **Response**: Complete stats object with profile, artists, tracks, and metrics
-
----
-
-## 🎨 Design Philosophy
-
-Statify embraces a **retro 90s Japanese aesthetic** with:
-- 🌸 Pastel color palettes (pink, purple, blue, yellow)
-- ✨ Neon glow effects
-- 🎮 Windows XP-inspired UI elements
-- 🎌 Japanese-inspired funky design elements
-- 💫 Smooth animations and transitions
+| Endpoint | Method | Description |
+|----------|--------|--------------|
+| `/api/auth/login` | GET | Returns `{ authUrl }` to start OAuth |
+| `/api/auth/callback` | GET | Handles Spotify callback, redirects to frontend with tokens |
+| `/api/auth/refresh` | POST | Body: `{ refresh_token }` — returns new tokens |
+| `/api/user/stats` | GET | Headers: `Authorization: Bearer <token>` — full stats (profile, artists, tracks, metrics) |
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- ⚛️ **React 18** - Modern UI library
-- 🎨 **Tailwind CSS** - Utility-first CSS framework
-- 🎭 **Framer Motion** - Animation library
-- 🛣️ **React Router** - Client-side routing
-- 📦 **Vite** - Fast build tool
-
-### Backend
-- 🚀 **Express.js** - Web framework
-- 🔐 **Spotify Web API** - Music data
-- 🌐 **Axios** - HTTP client
-- 🔒 **OAuth 2.0** - Authentication
+**Frontend:** React 18, TypeScript, Vite, Tailwind CSS v4, React Router, Lucide React  
+**Backend:** Node.js, Express, Axios, dotenv
 
 ---
 
-## 📝 Project Structure
+## 📁 Project Structure
 
 ```
 Statify/
 ├── backend/
-│   ├── server.js          # Express server with Spotify API integration
-│   └── package.json       # Backend dependencies
+│   ├── server.js          # Express server, Spotify OAuth + API
+│   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── HeroSection.tsx    # Landing page hero
-│   │   │   ├── CallbackPage.tsx   # OAuth callback handler
-│   │   │   ├── Dashboard.tsx      # Stats dashboard
-│   │   │   └── ...                # Other UI components
-│   │   ├── App.tsx                # Main app with routing
-│   │   └── main.tsx               # Entry point
-│   └── package.json               # Frontend dependencies
-├── configs.env                    # Environment variables
-└── README.md                      # This file
+│   │   │   ├── LandingPage.tsx   # Hero, How It Works, Features, Demo
+│   │   │   ├── CallbackPage.tsx  # OAuth callback handler
+│   │   │   └── Dashboard.tsx     # Stats dashboard
+│   │   ├── styles/
+│   │   │   └── globals.css       # Theme, layout, animations
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   └── package.json
+├── configs.env             # CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, FRONTEND_URL, PORT
+└── README.md
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Issue: "Failed to connect to Spotify"
-- ✅ Check that your backend server is running on port 5000
-- ✅ Verify your `CLIENT_ID` and `CLIENT_SECRET` in `configs.env`
-- ✅ Ensure your redirect URI matches in Spotify Developer Dashboard
-
-### Issue: "Token expired" error
-- ✅ The app automatically refreshes tokens, but if it fails:
-- ✅ Clear localStorage and reconnect your Spotify account
-- ✅ Check that your refresh token is valid
-
-### Issue: "CORS error"
-- ✅ Make sure both frontend and backend are running
-- ✅ Verify `FRONTEND_URL` in `configs.env` matches your frontend URL
-
----
-
-## 🎉 Contributing
-
-Contributions are welcome! Feel free to:
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 🎨 Improve the design
-- 📝 Update documentation
+| Issue | Fix |
+|-------|-----|
+| "Failed to connect to Spotify" | Ensure backend is running on port 5000. Run `cd Statify/backend && node server.js` |
+| Port 5000 in use | `netstat -ano \| findstr :5000` then `taskkill /PID <pid> /F` (Windows) |
+| "Token exchange failed" | Check REDIRECT_URI in Spotify Dashboard matches `http://127.0.0.1:5000/api/auth/callback` exactly |
+| Wrong port after login | Update `FRONTEND_URL` in `configs.env` to match where Vite runs (e.g. `http://127.0.0.1:3002`) |
+| CLIENT_ID/CLIENT_SECRET missing | Ensure `configs.env` is in `Statify/` (parent of `backend/`) |
 
 ---
 
 ## 📄 License
 
-This project is open source and available under the MIT License.
-
----
-
-## 🙏 Acknowledgments
-
-- 🎵 **Spotify** for the amazing Web API
-- 🎨 **Design inspiration** from retro 90s Japanese aesthetics
-- ⚛️ **React community** for excellent tools and libraries
+MIT License.
 
 ---
 
 <div align="center">
 
-**Made with ❤️ and 🎵 by the Statify Team**
-
-⭐ Star this repo if you like it!
+**Made with ❤️ and 🎵**
 
 </div>
-
