@@ -261,6 +261,8 @@ function DualTicker() {
 /* ═══ NAVBAR ═══ */
 function Navbar() {
   const [open, setOpen] = useState(false);
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('spotify_access_token');
+  const handleLogOut = () => { localStorage.clear(); window.location.href = '/'; };
   return (
     <>
       <nav className="nav">
@@ -269,11 +271,23 @@ function Navbar() {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#demo">Preview</a>
+          {isLoggedIn && <a href="/dashboard">Dashboard</a>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={handleConnectSpotify} className="btn-gold hidden-mobile" style={{ padding: '10px 22px', fontSize: 14 }}>
-            Connect Spotify &#9654;
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {isLoggedIn ? (
+            <>
+              <a href="/dashboard" className="btn-gold hidden-mobile" style={{ padding: '10px 22px', fontSize: 14, textDecoration: 'none' }}>
+                Open Dashboard &#9654;
+              </a>
+              <button onClick={handleLogOut} className="btn-ghost hidden-mobile" style={{ padding: '10px 18px', fontSize: 13 }}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <button onClick={handleConnectSpotify} className="btn-gold hidden-mobile" style={{ padding: '10px 22px', fontSize: 14 }}>
+              Connect Spotify &#9654;
+            </button>
+          )}
           <button className="nav-mobile-toggle" onClick={() => setOpen(!open)} aria-label="Menu">
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -284,9 +298,20 @@ function Navbar() {
           <a href="#how-it-works" onClick={() => setOpen(false)}>How It Works</a>
           <a href="#features" onClick={() => setOpen(false)}>Features</a>
           <a href="#demo" onClick={() => setOpen(false)}>Preview</a>
-          <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '12px 24px', marginTop: 8, width: '100%' }}>
-            Connect Spotify &#9654;
-          </button>
+          {isLoggedIn ? (
+            <>
+              <a href="/dashboard" className="btn-gold" style={{ padding: '12px 24px', marginTop: 8, width: '100%', textAlign: 'center', display: 'block', textDecoration: 'none' }} onClick={() => setOpen(false)}>
+                Open Dashboard &#9654;
+              </a>
+              <button onClick={() => { handleLogOut(); setOpen(false); }} className="btn-ghost" style={{ padding: '12px 24px', marginTop: 8, width: '100%' }}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '12px 24px', marginTop: 8, width: '100%' }}>
+              Connect Spotify &#9654;
+            </button>
+          )}
         </div>
       )}
       <style>{`.hidden-mobile { display: inline-flex; } @media(max-width:768px) { .hidden-mobile { display: none !important; } }`}</style>

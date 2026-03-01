@@ -221,7 +221,7 @@ app.get('/api/user/stats', async (req, res) => {
 
     const recentItems = await fetchAllRecentlyPlayed(access_token);
 
-    const totalMinutes = recentItems.reduce((t, item) => t + (item.track.duration_ms / 60000), 0);
+    const totalMinutes = recentItems.reduce((t, item) => t + ((item.track?.duration_ms || 0) / 60000), 0);
 
     const uniqueArtists = new Set();
     recentItems.forEach(item => item.track.artists.forEach(a => uniqueArtists.add(a.id)));
@@ -244,7 +244,7 @@ app.get('/api/user/stats', async (req, res) => {
     const dowMinutes = [0, 0, 0, 0, 0, 0, 0];
     recentItems.forEach(item => {
       const dow = new Date(item.played_at).getDay();
-      dowMinutes[dow] += item.track.duration_ms / 60000;
+      dowMinutes[dow] += (item.track?.duration_ms || 0) / 60000;
     });
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const activeDays = dayNames.map((name, i) => ({ name, minutes: Math.round(dowMinutes[i]) }));

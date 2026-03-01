@@ -145,10 +145,23 @@ function Sidebar({ active, onNav, displayName, avatarUrl }: { active: string; on
           )}
           <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
         </div>
-        <button onClick={() => { localStorage.clear(); window.location.href = '/'; }}
-          className="dash-nav-item" style={{ padding: '8px 0', color: 'var(--text-secondary)', fontSize: 11 }}>
-          <LogOut size={14} /> Disconnect
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+            className="dash-nav-item" style={{ padding: '8px 0', color: 'var(--text-secondary)', fontSize: 11 }}>
+            <LogOut size={14} /> Log out
+          </button>
+          <button onClick={async () => {
+            localStorage.clear();
+            try {
+              const res = await fetch(`${API_BASE}/api/auth/login`);
+              const data = await res.json();
+              if (data?.authUrl) window.location.href = data.authUrl;
+              else window.location.href = '/';
+            } catch { window.location.href = '/'; }
+          }} className="dash-nav-item" style={{ padding: '8px 0', color: 'var(--gold)', fontSize: 11 }}>
+            Re-authorize
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -177,9 +190,9 @@ function BottomBar({ active, onNav }: { active: string; onNav: (s: string) => vo
   );
 }
 
-/* ═══ NOW PLAYING PILL ═══ */
+/* ═══ NOW PLAYING — always visible ═══ */
 function NowPlaying({ accessToken }: { accessToken: string }) {
-  const [np, setNp] = useState<NowPlayingData | null>(null);
+  const [np, setNp] = useState<NowPlayingData>({ playing: false });
 
   useEffect(() => {
     const fetchNp = async () => {
@@ -189,24 +202,47 @@ function NowPlaying({ accessToken }: { accessToken: string }) {
       } catch { /* ignore */ }
     };
     fetchNp();
-    const interval = setInterval(fetchNp, 30000);
+    const interval = setInterval(fetchNp, 15000);
     return () => clearInterval(interval);
   }, [accessToken]);
 
-  if (!np?.playing) return null;
-
   const pct = np.duration ? Math.round(((np.progress || 0) / np.duration) * 100) : 0;
+  const isPlaying = np.playing && np.track;
 
   return (
-    <div className="now-playing-pill">
-      <div className="np-reel" />
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>{np.track}</div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>{np.artist}</div>
+    <div className="card" style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 20, overflow: 'hidden' }}>
+      {/* Spinning vinyl disc */}
+      <div style={{ flexShrink: 0, position: 'relative', width: 56, height: 56 }}>
+        <svg viewBox="0 0 56 56" style={{ width: 56, height: 56 }} className={isPlaying ? 'reel-spin' : ''}>
+          <circle cx="28" cy="28" r="26" fill="none" stroke="var(--gold)" strokeWidth="1" opacity="0.3" />
+          <circle cx="28" cy="28" r="20" fill="none" stroke="var(--gold)" strokeWidth="0.5" opacity="0.15" />
+          <circle cx="28" cy="28" r="14" fill="none" stroke="var(--gold)" strokeWidth="0.5" opacity="0.15" />
+          <circle cx="28" cy="28" r="8" fill="none" stroke="var(--gold)" strokeWidth="1" opacity="0.3" />
+          <circle cx="28" cy="28" r="3" fill="var(--gold)" opacity="0.8" />
+          {isPlaying && np.albumArt && <clipPath id="vinylClip"><circle cx="28" cy="28" r="20" /></clipPath>}
+          {isPlaying && np.albumArt && <image href={np.albumArt} x="8" y="8" width="40" height="40" clipPath="url(#vinylClip)" opacity="0.4" />}
+        </svg>
+        {isPlaying && <div style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#4ADE80', border: '2px solid var(--surface)' }} />}
       </div>
-      <div className="np-progress">
-        <div className="np-bar" style={{ width: `${pct}%` }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {isPlaying ? (
+          <>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--gold)', letterSpacing: '0.15em', marginBottom: 4 }}>♪ NOW PLAYING</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{np.track}</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{np.artist}</div>
+            <div style={{ marginTop: 8, height: 3, background: 'rgba(212,168,67,0.15)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: 'var(--gold)', borderRadius: 2, transition: 'width 1s linear' }} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', letterSpacing: '0.15em', marginBottom: 4 }}>TUNED IN</div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--text-secondary)' }}>Nothing playing right now</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-secondary)', opacity: 0.5 }}>Play something on Spotify to see it here</div>
+          </>
+        )}
       </div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', opacity: 0.4, flexShrink: 0 }}>CH 01</div>
     </div>
   );
 }
@@ -262,60 +298,65 @@ function HeroArtist({ artist, minutes }: { artist: Artist; minutes: number }) {
       <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative', borderRadius: 20 }}>
         {imgUrl && <div className="hero-artist-bg" style={{ backgroundImage: `url(${imgUrl})` }} />}
         <div className="hero-artist-overlay" />
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'row', alignItems: 'stretch' }} className="ha-layout">
-          <div className="ha-photo" style={{ width: 280, flexShrink: 0 }}>
-            {imgUrl ? <img src={imgUrl} alt={artist.name} style={{ width: '100%', height: 280, objectFit: 'cover', borderRadius: 12, margin: 24, display: 'block' }} />
-              : <div style={{ width: 280, height: 280, margin: 24, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VinylIcon size={48} /></div>}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: 0 }} className="ha-layout">
+          <div className="ha-photo" style={{ flexShrink: 0, padding: 24 }}>
+            {imgUrl ? <img src={imgUrl} alt={artist.name} style={{ width: 240, height: 240, objectFit: 'cover', borderRadius: 12, display: 'block' }} />
+              : <div style={{ width: 240, height: 240, borderRadius: 12, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VinylIcon size={48} /></div>}
           </div>
-          <div className="artist-hero-info" style={{ flex: 1, padding: '40px 40px 40px 16px' }}>
+          <div className="artist-hero-info" style={{ flex: 1, padding: '32px 32px 32px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12, minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--gold)', letterSpacing: '0.2em' }}>TOP ARTIST</div>
             <a href={artist.external_urls?.spotify} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 72px)', color: 'var(--text-primary)', lineHeight: 0.95, transition: 'color 0.2s' }}
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 64px)', color: 'var(--text-primary)', lineHeight: 0.95, transition: 'color 0.2s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--gold)'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}>
                 {artist.name.toUpperCase()}
               </h2>
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>{minutes.toLocaleString()}</span>
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)' }}>MINUTES ON TAPE</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 600, color: 'var(--gold)', lineHeight: 1 }}>{minutes.toLocaleString()}</span>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-secondary)' }}>MINUTES ON TAPE</span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', padding: '4px 10px', borderRadius: 100, background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.2)' }}>#1 IN YOUR ROTATION</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 24, marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 20 }}>
               {Array.from({ length: 20 }, (_, i) => (
                 <div key={i} style={{ width: 3, borderRadius: 2, height: `${30 + Math.sin(i * 0.6) * 50 + Math.cos(i * 0.9) * 20}%`, background: '#D4A843', opacity: 0.2 + Math.sin(i * 0.4) * 0.1, animation: `wavePulse ${2 + (i % 5) * 0.3}s ease-in-out infinite`, animationDelay: `${i * 0.08}s` }} />
               ))}
             </div>
-            <div style={{ position: 'absolute', bottom: 16, right: 20, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', padding: '4px 8px', borderRadius: 6, background: 'rgba(26,23,20,0.6)' }}>CH 01</div>
           </div>
+          <div style={{ position: 'absolute', bottom: 16, right: 20, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', padding: '4px 8px', borderRadius: 6, background: 'rgba(26,23,20,0.6)', zIndex: 3 }}>CH 01</div>
         </div>
       </div>
-      <style>{`@media(max-width:768px){.ha-layout{flex-direction:column!important}.ha-photo{width:100%!important}.ha-photo img{width:calc(100% - 32px)!important;height:200px!important;margin:16px!important}.artist-hero-info{padding:20px!important;text-align:center}}`}</style>
+      <style>{`@media(max-width:768px){.ha-layout{flex-direction:column!important}.ha-photo{padding:16px!important}.ha-photo img{width:100%!important;height:200px!important}.artist-hero-info{padding:16px 20px!important;text-align:center}}`}</style>
     </div>
   );
 }
 
-/* ═══ HEATMAP (fixed — uses track count) ═══ */
+/* ═══ HEATMAP — normalized data + better sparse display ═══ */
 function Heatmap({ data }: { data: UserStats['heatmap'] }) {
   const reveal = useReveal();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
   const dayMap: Record<string, number> = {};
   data.forEach(d => { dayMap[d.date] = d.count; });
+  const totalTracks = data.reduce((s, d) => s + d.count, 0);
+  const activeDayCount = data.filter(d => d.count > 0).length;
 
   const today = new Date();
   const days: { date: string; count: number }[] = [];
   for (let i = 364; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    days.push({ date: d.toISOString().split('T')[0], count: dayMap[d.toISOString().split('T')[0]] || 0 });
+    const key = d.toISOString().split('T')[0];
+    days.push({ date: key, count: dayMap[key] || 0 });
   }
 
+  const maxCount = Math.max(...days.map(d => d.count), 1);
   const getColor = (count: number) => {
     if (count === 0) return 'rgba(212,168,67,0.06)';
-    if (count <= 3) return 'rgba(212,168,67,0.2)';
-    if (count <= 7) return 'rgba(212,168,67,0.45)';
-    if (count <= 12) return 'rgba(212,168,67,0.7)';
+    const ratio = count / maxCount;
+    if (ratio <= 0.25) return 'rgba(212,168,67,0.2)';
+    if (ratio <= 0.5) return 'rgba(212,168,67,0.45)';
+    if (ratio <= 0.75) return 'rgba(212,168,67,0.7)';
     return '#D4A843';
   };
 
@@ -324,7 +365,15 @@ function Heatmap({ data }: { data: UserStats['heatmap'] }) {
   return (
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
       <div className="card" style={{ padding: 32 }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 20 }}>YOUR LISTENING YEAR</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)' }}>YOUR LISTENING YEAR</h3>
+          {totalTracks > 0 && (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', padding: '4px 10px', background: 'rgba(212,168,67,0.06)', borderRadius: 100, border: '1px solid rgba(212,168,67,0.1)' }}>{totalTracks} tracks</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', padding: '4px 10px', background: 'rgba(212,168,67,0.06)', borderRadius: 100, border: '1px solid rgba(212,168,67,0.1)' }}>{activeDayCount} active days</span>
+            </div>
+          )}
+        </div>
         <div style={{ overflowX: 'auto', position: 'relative' }}>
           <div style={{ display: 'flex', gap: 3, marginBottom: 4, paddingLeft: 24 }}>
             {months.map((m, i) => (
@@ -341,19 +390,20 @@ function Heatmap({ data }: { data: UserStats['heatmap'] }) {
             </div>
             <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 12px)', gridAutoFlow: 'column', gap: 3 }}>
               {days.map((day, i) => (
-                <div key={i} className="heat-square" style={{ background: getColor(day.count), animationDelay: `${i * 2}ms` }}
+                <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(day.count), transition: 'transform 0.15s', cursor: 'pointer' }}
                   onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'scale(1.4)';
                     const r = e.currentTarget.getBoundingClientRect();
                     const d = new Date(day.date);
                     setTooltip({ x: r.left, y: r.top - 36, text: `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${day.count} tracks` });
                   }}
-                  onMouseLeave={() => setTooltip(null)} />
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; setTooltip(null); }} />
               ))}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>Less</span>
-            {[0, 2, 5, 10, 15].map((v, i) => <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(v) }} />)}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: getColor(Math.round(ratio * maxCount)) }} />)}
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>More</span>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', marginLeft: 12, opacity: 0.5 }}>Based on your recent listening history</span>
           </div>
@@ -366,99 +416,213 @@ function Heatmap({ data }: { data: UserStats['heatmap'] }) {
   );
 }
 
-/* ═══ GENRE NETWORK ═══ */
+/* ═══ GENRE NETWORK — bigger nodes, lines, drag, collisions ═══ */
 function GenreNetwork({ genres }: { genres: UserStats['genreBreakdown'] }) {
   const reveal = useReveal();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<Array<{ name: string; pct: number; color: string; x: number; y: number; vx: number; vy: number; r: number }>>([]);
   const animRef = useRef<number>(0);
+  const dragRef = useRef<{ idx: number; offsetX: number; offsetY: number } | null>(null);
+  const velocityRef = useRef<{ vx: number; vy: number; lastX: number; lastY: number; lastT: number }>({ vx: 0, vy: 0, lastX: 0, lastY: 0, lastT: 0 });
   const colors = ['#D4A843', '#4DBDB5', '#C93333', '#7B6FA0', '#5A8A6A', '#8A6A3A'];
+
+  const handleDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const nodes = nodesRef.current;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      if (Math.hypot(px - n.x, py - n.y) <= n.r) {
+        dragRef.current = { idx: i, offsetX: n.x - px, offsetY: n.y - py };
+        n.vx = 0; n.vy = 0;
+        velocityRef.current = { vx: 0, vy: 0, lastX: n.x, lastY: n.y, lastT: performance.now() };
+        return;
+      }
+    }
+  }, []);
+
+  const handleMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!dragRef.current) return;
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    const d = dragRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const cr = container.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const W = cr.width;
+    const H = cr.height;
+    const n = nodesRef.current[d.idx];
+    const prevX = n.x, prevY = n.y;
+    n.x = Math.max(n.r, Math.min(W - n.r, px + d.offsetX));
+    n.y = Math.max(n.r, Math.min(H - n.r, py + d.offsetY));
+    const v = velocityRef.current;
+    const now = performance.now();
+    const dt = Math.max(now - v.lastT, 4);
+    const rawVx = (n.x - prevX) * 0.35 * 16 / dt;
+    const rawVy = (n.y - prevY) * 0.35 * 16 / dt;
+    velocityRef.current = {
+      vx: rawVx * 0.5 + v.vx * 0.5,
+      vy: rawVy * 0.5 + v.vy * 0.5,
+      lastX: n.x, lastY: n.y, lastT: now
+    };
+  }, []);
+
+  const handleUp = useCallback(() => {
+    if (dragRef.current) {
+      const v = velocityRef.current;
+      const FLING_SCALE = 2.2;
+      const n = nodesRef.current[dragRef.current.idx];
+      n.vx = Math.max(-10, Math.min(10, v.vx * FLING_SCALE));
+      n.vy = Math.max(-10, Math.min(10, v.vy * FLING_SCALE));
+      dragRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || genres.length === 0 || !reveal.visible) return;
+    const container = containerRef.current;
+    if (!canvas || !container || genres.length === 0 || !reveal.visible) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width;
-    const h = rect.height;
+    const resize = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
 
-    if (nodesRef.current.length === 0) {
+    const w = () => container.getBoundingClientRect().width;
+    const h = () => container.getBoundingClientRect().height;
+
+    if (nodesRef.current.length !== genres.length) {
+      const W = Math.max(w(), 400); const H = Math.max(h(), 320);
       nodesRef.current = genres.map((g, i) => ({
         name: g.name, pct: g.pct, color: colors[i % colors.length],
-        x: w * 0.2 + Math.random() * w * 0.6,
-        y: h * 0.2 + Math.random() * h * 0.6,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: 20 + (g.pct / 100) * 40,
+        x: 80 + Math.random() * (W - 160),
+        y: 80 + Math.random() * (H - 160),
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: (Math.random() - 0.5) * 1.6,
+        r: 44 + (g.pct / 100) * 56,
       }));
     }
 
+    const GRAVITY = 0.18;
+    const RESTITUTION = 0.72;
+
     const draw = () => {
-      ctx.clearRect(0, 0, w, h);
+      const W = w(); const H = h();
+      if (W <= 0 || H <= 0) { animRef.current = requestAnimationFrame(draw); return; }
+      ctx.fillStyle = '#242018';
+      ctx.fillRect(0, 0, W, H);
       const nodes = nodesRef.current;
+      const dragging = dragRef.current?.idx ?? -1;
 
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[i].x - nodes[j].x;
           const dy = nodes[i].y - nodes[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 200) {
+          const maxDist = 320;
+          if (dist < maxDist && dist > 0) {
+            const alpha = 0.4 * (1 - dist / maxDist);
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.strokeStyle = `rgba(212,168,67,${0.15 * (1 - dist / 200)})`;
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(212,168,67,${alpha})`;
+            ctx.lineWidth = 2;
             ctx.stroke();
           }
         }
       }
 
-      nodes.forEach(n => {
+      nodes.forEach((n, i) => {
+        if (i === dragging) return;
+        n.vy += GRAVITY;
         n.x += n.vx; n.y += n.vy;
-        if (n.x - n.r < 0 || n.x + n.r > w) n.vx *= -1;
-        if (n.y - n.r < 0 || n.y + n.r > h) n.vy *= -1;
-        n.x = Math.max(n.r, Math.min(w - n.r, n.x));
-        n.y = Math.max(n.r, Math.min(h - n.r, n.y));
+        if (n.x - n.r < 0) { n.vx *= -RESTITUTION; n.x = n.r; }
+        if (n.x + n.r > W) { n.vx *= -RESTITUTION; n.x = W - n.r; }
+        if (n.y - n.r < 0) { n.vy *= -RESTITUTION; n.y = n.r; }
+        if (n.y + n.r > H) { n.vy *= -RESTITUTION; n.y = H - n.r; }
+        n.x = Math.max(n.r, Math.min(W - n.r, n.x));
+        n.y = Math.max(n.r, Math.min(H - n.r, n.y));
+      });
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i]; const b = nodes[j];
+          const aDrag = i === dragging; const bDrag = j === dragging;
+          const dx = b.x - a.x; const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const overlap = a.r + b.r - dist;
+          if (overlap > 0 && dist > 0.001) {
+            const nx = dx / dist; const ny = dy / dist;
+            if (!aDrag) { a.x -= nx * overlap * 0.5; a.y -= ny * overlap * 0.5; }
+            if (!bDrag) { b.x += nx * overlap * 0.5; b.y += ny * overlap * 0.5; }
+            const dvx = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+            if (!aDrag) { a.vx -= nx * dvx * 0.5; a.vy -= ny * dvx * 0.5; }
+            if (!bDrag) { b.vx += nx * dvx * 0.5; b.vy += ny * dvx * 0.5; }
+          }
+        }
+      }
 
+      nodes.forEach((n, i) => {
+        const isDragging = i === dragging;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = n.color + '33';
+        ctx.fillStyle = n.color + (isDragging ? '55' : '33');
         ctx.fill();
         ctx.strokeStyle = n.color;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = isDragging ? 3 : 2;
         ctx.stroke();
 
         ctx.fillStyle = '#EDE3D0';
-        ctx.font = '600 11px "IBM Plex Mono"';
+        ctx.font = '600 14px "IBM Plex Mono"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(n.pct + '%', n.x, n.y - 6);
-        ctx.font = '10px "DM Sans"';
-        ctx.fillText(n.name.length > 12 ? n.name.slice(0, 10) + '…' : n.name, n.x, n.y + 8);
+        ctx.fillText(n.pct + '%', n.x, n.y - 8);
+        ctx.font = '12px "DM Sans"';
+        ctx.fillText(n.name.length > 14 ? n.name.slice(0, 12) + '…' : n.name, n.x, n.y + 10);
       });
 
       animRef.current = requestAnimationFrame(draw);
     };
 
     animRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animRef.current);
+    return () => { ro.disconnect(); cancelAnimationFrame(animRef.current); };
   }, [genres, reveal.visible]);
+
+  useEffect(() => {
+    const onUp = () => dragRef.current = null;
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, []);
 
   return (
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
       <div className="card" style={{ padding: 32 }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 20 }}>YOUR SOUND</h3>
-        <canvas ref={canvasRef} className="genre-network-canvas" style={{ width: '100%', height: 320 }} />
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Drag the circles — they bounce off each other</p>
+        <div ref={containerRef} className="genre-network-container" style={{ width: '100%', height: 420, minHeight: 320, borderRadius: 12, overflow: 'hidden', cursor: 'grab' }}>
+          <canvas ref={canvasRef} onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={handleUp} onMouseLeave={handleUp} style={{ display: 'block' }} />
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
           {genres.map((g, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: colors[i % colors.length] }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: colors[i % colors.length] }} />
               <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{g.name}</span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--gold)' }}>{g.pct}%</span>
             </div>
@@ -498,71 +662,148 @@ function ArtistPortraits({ artists }: { artists: Artist[] }) {
   );
 }
 
-/* ═══ TRACK LIST ═══ */
+/* ═══ WAVEFORM SVG ═══ */
+function WaveformSVG() {
+  const bars = 20;
+  const barW = 4;
+  const gap = 2;
+  const totalW = bars * (barW + gap);
+  const heights = Array.from({ length: bars }, () => 6 + Math.random() * 18);
+  return (
+    <svg viewBox={`0 0 ${totalW} 30`} className="waveform-svg" style={{ width: '100%', height: 30, marginBottom: 20 }}>
+      {heights.map((h, i) => (
+        <rect key={i} x={i * (barW + gap)} y={(30 - h) / 2} width={barW} height={h} rx={2} className="waveform-bar" style={{ animationDelay: `${i * 0.06}s` }} />
+      ))}
+    </svg>
+  );
+}
+
+/* ═══ TRACK LIST — Liner Notes aesthetic ═══ */
 function TrackList({ tracks }: { tracks: Track[] }) {
   const reveal = useReveal();
-  const maxDur = tracks[0]?.duration_ms || 1;
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [barsAnimated, setBarsAnimated] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setBarsAnimated(true); }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const maxPop = Math.max(...tracks.map(t => t.popularity ?? 50), 1);
+
+  const formatDur = (ms: number) => ms ? `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}` : '';
+
+  const featured = tracks[0];
+  const listTracks = tracks;
 
   return (
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
       <div className="section-eyebrow">♫ THE TRACKLIST</div>
-      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 20, marginTop: 8 }}>YOUR TOP TRACKS</h3>
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {tracks.map((track, i) => {
-          const imgUrl = track.album?.images?.[0]?.url;
-          const dur = track.duration_ms ? `${Math.floor(track.duration_ms / 60000)}:${String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}` : '';
-          const relWidth = Math.round((track.duration_ms / maxDur) * 100);
-          return (
-            <a key={track.id} href={track.external_urls?.spotify} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', textDecoration: 'none', position: 'relative', borderBottom: i < tracks.length - 1 ? '1px solid rgba(212,168,67,0.08)' : 'none', transition: 'background 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 24px' }}>
-                <div style={{ width: 36, textAlign: 'center', flexShrink: 0, position: 'relative' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: i === 0 ? 'var(--gold)' : 'rgba(122,110,96,0.3)' }}>{String(i + 1).padStart(2, '0')}</span>
-                  {i === 0 && <span className="reel-spin" style={{ position: 'absolute', width: 14, height: 14, top: 0, right: -5, border: '1.5px solid rgba(212,168,67,0.3)', borderTopColor: 'var(--gold)', borderRadius: '50%' }} />}
-                </div>
-                {imgUrl ? <img src={imgUrl} alt="" style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: 48, height: 48, borderRadius: 6, background: 'var(--surface-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VinylIcon size={16} /></div>}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.artists?.map(a => a.name).join(', ')}</div>
-                </div>
-                {dur && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{dur}</span>}
-              </div>
-              <div className="track-bar-container"><div className="track-bar-fill" style={{ width: `${relWidth}%` }} /></div>
-            </a>
-          );
-        })}
+      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 24, marginTop: 8 }}>YOUR TOP TRACKS</h3>
+
+      <div ref={sectionRef} className="tracks-layout">
+        <div className="tracks-left">
+          <div className="tracklist-card">
+            {listTracks.map((track, i) => {
+              const imgUrl = track.album?.images?.[0]?.url;
+              const dur = formatDur(track.duration_ms || 0);
+              const barPct = Math.round(((track.popularity ?? 50) / maxPop) * 100);
+              const rank = String(i + 1).padStart(2, '0');
+              return (
+                <a key={track.id} href={track.external_urls?.spotify} target="_blank" rel="noopener noreferrer" className={`track-row ${i === 0 ? 'track-row-featured' : ''}`} data-rank={rank}>
+                  <div className="track-rank">{rank}</div>
+                  <div className="track-art-wrap">
+                    {imgUrl ? <img src={imgUrl} alt="" className="track-art" /> : <div style={{ width: '100%', height: '100%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VinylIcon size={20} /></div>}
+                    <div className="track-art-overlay" />
+                  </div>
+                  <div className="track-meta">
+                    <span className="track-name">{track.name}</span>
+                    <span className="track-artist">{track.artists?.map(a => a.name).join(', ')}</span>
+                  </div>
+                  <div className="track-bar-wrap">
+                    <div className="track-bar" style={{ width: barsAnimated ? `${barPct}%` : '0%' }} />
+                  </div>
+                  <div className="track-duration">{dur}</div>
+                  <span className="track-spotify-link">↗</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="featured-track-panel">
+          <div className="featured-label">
+            <span className="rec-dot" /><span>NOW ON TAPE</span>
+          </div>
+          <div className="featured-art-wrap">
+            {featured?.album?.images?.[0]?.url ? (
+              <img src={featured.album.images[0].url} alt="" className="featured-art" />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><VinylIcon size={64} /></div>
+            )}
+          </div>
+          <div className="featured-info">
+            <p className="featured-rank-label">YOUR #1 TRACK</p>
+            <h2 className="featured-track-name">{featured?.name || '—'}</h2>
+            <p className="featured-artist">{featured?.artists?.map(a => a.name).join(', ') || '—'}</p>
+            <div className="featured-waveform"><WaveformSVG /></div>
+            <div className="featured-stats-row">
+              <div className="featured-stat"><span className="fstat-num">#1</span><span className="fstat-label">RANK</span></div>
+              <div className="featured-stat"><span className="fstat-num">{formatDur(featured?.duration_ms || 0)}</span><span className="fstat-label">DURATION</span></div>
+              <div className="featured-stat"><span className="fstat-num">{featured?.popularity ?? '—'}</span><span className="fstat-label">POPULARITY</span></div>
+            </div>
+          </div>
+          <a href={featured?.external_urls?.spotify} target="_blank" rel="noopener noreferrer" className="open-spotify-btn">Open in Spotify ↗</a>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ═══ ACTIVE DAYS (fixed — uses real minutes) ═══ */
+/* ═══ ACTIVE DAYS — handles both field names + empty state ═══ */
 function ActiveDays({ data }: { data: UserStats['activeDays'] }) {
   const reveal = useReveal();
+  const totalMins = data.reduce((sum, d) => sum + d.minutes, 0);
   const maxVal = Math.max(...data.map(d => d.minutes), 1);
   const peakIdx = data.indexOf(data.reduce((a, b) => a.minutes > b.minutes ? a : b));
+  const avgMins = Math.round(totalMins / 7);
 
   return (
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
       <div className="card" style={{ padding: 32 }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 24 }}>YOUR RHYTHM</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {data.map((d, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', width: 80, flexShrink: 0 }}>{d.name.slice(0, 3)}</span>
-              <div className="bar-track">
-                <div className="bar-fill" style={{ width: reveal.visible ? `${(d.minutes / maxVal) * 100}%` : '0%' }} />
-              </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', width: 60, flexShrink: 0, textAlign: 'right' }}>{d.minutes} min</span>
-              {i === peakIdx && d.minutes > 0 && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', padding: '2px 8px', borderRadius: 100, background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.2)', flexShrink: 0 }}>★ PEAK</span>
-              )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)' }}>YOUR RHYTHM</h3>
+          {totalMins > 0 && (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', padding: '4px 12px', background: 'rgba(212,168,67,0.06)', borderRadius: 100, border: '1px solid rgba(212,168,67,0.1)' }}>
+              AVG {avgMins} min/day
             </div>
-          ))}
+          )}
         </div>
+        {totalMins === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <WaveIcon size={32} />
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)', marginTop: 12 }}>Not enough recent data yet</p>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', opacity: 0.5, marginTop: 4 }}>Keep listening — your rhythm will appear here</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {data.map((d, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: i === peakIdx && d.minutes > 0 ? 'var(--gold)' : 'var(--text-secondary)', width: 80, flexShrink: 0, fontWeight: i === peakIdx ? 600 : 400 }}>{d.name.slice(0, 3)}</span>
+                <div style={{ flex: 1, height: 8, background: 'rgba(212,168,67,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: reveal.visible ? `${(d.minutes / maxVal) * 100}%` : '0%', background: i === peakIdx ? 'var(--gold)' : 'rgba(212,168,67,0.5)', borderRadius: 4, transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)', transitionDelay: `${i * 80}ms` }} />
+                </div>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', width: 60, flexShrink: 0, textAlign: 'right' }}>{Math.round(d.minutes)} min</span>
+                {i === peakIdx && d.minutes > 0 && (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--gold)', padding: '2px 8px', borderRadius: 100, background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.2)', flexShrink: 0 }}>★ PEAK</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -602,8 +843,8 @@ function TimeOfDay({ hours }: { hours: number[] }) {
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
       <div className="card" style={{ padding: 32 }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 20 }}>YOUR CLOCK</h3>
-        <div className="radial-chart">
-          <svg viewBox="0 0 300 300" style={{ width: 300, height: 300 }}>
+        <div className="radial-chart" style={{ display: 'flex', justifyContent: 'center' }}>
+          <svg viewBox="0 0 300 300" style={{ width: 'min(480px, 100%)', height: 'min(480px, 100%)', maxWidth: 480, maxHeight: 480 }}>
             {arcs.map((a, i) => (
               <path key={i} d={a.path} fill={`rgba(212,168,67,${a.opacity})`} stroke="rgba(26,23,20,0.5)" strokeWidth="0.5" />
             ))}
@@ -617,6 +858,57 @@ function TimeOfDay({ hours }: { hours: number[] }) {
             <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--gold)" fontSize="12" fontFamily="'IBM Plex Mono'" fontWeight="600">PEAK</text>
             <text x={cx} y={cy + 8} textAnchor="middle" fill="var(--text-primary)" fontSize="14" fontFamily="'Bebas Neue'">{peakLabel}</text>
           </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ LISTENING CIRCLE — friend compatibility ═══ */
+function ListeningCircle() {
+  const reveal = useReveal();
+  const friends = [
+    { name: 'Alex M.', artist: 'Drake', pct: 87, color: '#D4A843' },
+    { name: 'Sam K.', artist: 'Billie Eilish', pct: 72, color: '#4DBDB5' },
+    { name: 'Jordan P.', artist: 'Tyler', pct: 64, color: '#C93333' },
+    { name: 'Taylor R.', artist: 'SZA', pct: 91, color: '#7B6FA0' },
+    { name: 'Chris W.', artist: 'Kanye West', pct: 78, color: '#5A8A6A' },
+    { name: 'Morgan L.', artist: 'Doja Cat', pct: 55, color: '#8A6A3A' },
+  ];
+
+  const CompatRing = ({ pct, color, name }: { pct: number; color: string; name: string }) => {
+    const r = 30; const c = 2 * Math.PI * r; const dash = (pct / 100) * c;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'relative', width: 72, height: 72 }}>
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(212,168,67,0.1)" strokeWidth="3" />
+            <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="3" strokeDasharray={`${dash} ${c - dash}`} strokeLinecap="round" transform="rotate(-90 36 36)" />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 16, color }}>
+              {name.charAt(0)}
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-primary)' }}>{name}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color }}>{pct}% match</div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
+      <div className="card" style={{ padding: 32 }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--text-primary)', marginBottom: 8 }}>YOUR CIRCLE</h3>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>See how your taste matches with friends</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center' }}>
+          {friends.map((f, i) => <CompatRing key={i} pct={f.pct} color={f.color} name={f.name} />)}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <button className="btn-ghost" style={{ padding: '10px 20px', fontSize: 12 }}>Invite Friends <ArrowRight size={14} /></button>
         </div>
       </div>
     </div>
@@ -707,6 +999,7 @@ export function Dashboard() {
     fetchStats();
   }, [accessToken]);
 
+  const defaultDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const s: UserStats | null = stats ? {
     ...stats,
     topArtists: stats.topArtists || [],
@@ -714,13 +1007,16 @@ export function Dashboard() {
     topTracks: stats.topTracks || [],
     recentlyPlayed: stats.recentlyPlayed || [],
     genreBreakdown: stats.genreBreakdown || [],
-    heatmap: stats.heatmap || [],
-    activeDays: stats.activeDays || [
-      { name: 'Sunday', minutes: 0 }, { name: 'Monday', minutes: 0 },
-      { name: 'Tuesday', minutes: 0 }, { name: 'Wednesday', minutes: 0 },
-      { name: 'Thursday', minutes: 0 }, { name: 'Friday', minutes: 0 },
-      { name: 'Saturday', minutes: 0 },
-    ],
+    heatmap: ((stats.heatmap || []) as Array<Record<string, unknown>>).map(d => ({
+      date: (d.date as string) || '',
+      count: (d.count as number) ?? (d.minutes as number) ?? 0,
+    })),
+    activeDays: stats.activeDays?.length
+      ? (stats.activeDays as Array<Record<string, unknown>>).map(d => ({
+          name: (d.name as string) || '',
+          minutes: (d.minutes as number) ?? (d.avgMinutes as number) ?? 0,
+        }))
+      : defaultDays.map(name => ({ name, minutes: 0 })),
     hourlyActivity: stats.hourlyActivity || new Array(24).fill(0),
     personality: stats.personality || { type: 'THE DEEP DIVER', description: 'Connect to discover your type.' },
     stats: stats.stats || { totalMinutesListened: 0, uniqueArtistsCount: 0, totalTracksPlayed: 0 },
@@ -755,14 +1051,25 @@ export function Dashboard() {
       <BottomBar active={activeSection} onNav={scrollToSection} />
 
       <main className="dash-main">
-        {/* Now Playing + Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text-primary)' }}>DASHBOARD</h1>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', letterSpacing: '0.1em' }}>Your broadcast summary</p>
           </div>
-          {accessToken && <NowPlaying accessToken={accessToken} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={async () => { localStorage.clear(); try { const r = await fetch(`${API_BASE}/api/auth/login`); const d = await r.json(); if (d?.authUrl) window.location.href = d.authUrl; else window.location.href = '/'; } catch { window.location.href = '/'; } }}
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--gold)', background: 'rgba(212,168,67,0.08)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 100, padding: '8px 14px', cursor: 'pointer' }}>
+              Re-authorize
+            </button>
+            <button onClick={() => { localStorage.clear(); window.location.href = '/'; }}
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid rgba(212,168,67,0.12)', borderRadius: 100, padding: '8px 14px', cursor: 'pointer' }}>
+              Log out
+            </button>
+          </div>
         </div>
+
+        {/* Now Playing — always visible */}
+        {accessToken && <div style={{ marginBottom: 32 }}><NowPlaying accessToken={accessToken} /></div>}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
           <div id="section-overview"><StatTiles stats={s.stats} /></div>
@@ -777,6 +1084,7 @@ export function Dashboard() {
               <TimeOfDay hours={s.hourlyActivity} />
             </div>
           </div>
+          <ListeningCircle />
           <MoodBoard personality={s.personality} topTracks={s.topTracks} />
         </div>
 
