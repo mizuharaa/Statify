@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ArrowRight, LogOut, Menu } from 'lucide-react';
 
-const API_BASE = import.meta.env.DEV ? '' : `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5001`;
+const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5001`);
 
 /* ═══ TYPES ═══ */
 interface Artist { id: string; name: string; images: Array<{ url: string; height: number; width: number }>; external_urls: { spotify: string }; genres?: string[]; }

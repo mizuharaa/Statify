@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
 
-const API_BASE = import.meta.env.DEV ? '' : `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5001`;
+const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5001`);
 
 const handleConnectSpotify = async () => {
   try {
