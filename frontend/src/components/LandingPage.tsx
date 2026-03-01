@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Plug, Waves, Star, Menu, X, Music, Disc3, Headphones, Clock } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { ArrowRight, Menu, X } from 'lucide-react';
 
-const API_BASE = `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5000`;
+const API_BASE = import.meta.env.DEV ? '' : `http://${typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1'}:5001`;
 
 const handleConnectSpotify = async () => {
   try {
@@ -11,7 +11,6 @@ const handleConnectSpotify = async () => {
     if (!data?.authUrl) throw new Error('No auth URL in response');
     window.location.href = data.authUrl;
   } catch (error) {
-    console.error('Error initiating Spotify login:', error);
     const msg = error instanceof Error ? error.message : String(error);
     alert(`Failed to connect to Spotify.\n\n${msg}\n\nMake sure the backend is running: cd Statify/backend && node server.js`);
   }
@@ -23,45 +22,239 @@ function useReveal() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
-    );
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold: 0.1 });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
   return { ref, visible };
 }
 
-/* ── Cassette SVG ── */
-function CassetteSVG() {
+/* ═══ CUSTOM SVG ICONS ═══ */
+const CassetteIcon = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" stroke="#D4A843" strokeWidth="1.5">
+    <rect x="3" y="6" width="22" height="16" rx="3" />
+    <circle cx="10" cy="14" r="3" /><circle cx="18" cy="14" r="3" />
+    <path d="M13 14h2" /><path d="M7 22h14" strokeOpacity="0.4" />
+  </svg>
+);
+
+const VennIcon = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" stroke="#D4A843" strokeWidth="1.5">
+    <circle cx="11" cy="14" r="7" /><circle cx="17" cy="14" r="7" />
+  </svg>
+);
+
+const RadioTowerIcon = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" stroke="#D4A843" strokeWidth="1.5">
+    <path d="M14 24V10" strokeLinecap="round" />
+    <path d="M10 24h8" strokeLinecap="round" />
+    <circle cx="14" cy="8" r="2" />
+    <path d="M9 12Q14 4 19 12" strokeOpacity="0.7" />
+    <path d="M6 15Q14 3 22 15" strokeOpacity="0.4" />
+  </svg>
+);
+
+const VinylIcon = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 28 28" fill="none" stroke="#D4A843" strokeWidth="1.5">
+    <circle cx="14" cy="14" r="11" /><circle cx="14" cy="14" r="4" />
+    <circle cx="14" cy="14" r="1.5" fill="#D4A843" stroke="none" />
+  </svg>
+);
+
+/* ═══ PARTICLE NETWORK CANVAS ═══ */
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const particlesRef = useRef<Array<{ x: number; y: number; vx: number; vy: number; size: number }>>([]);
+  const animRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+
+    if (particlesRef.current.length === 0) {
+      for (let i = 0; i < 80; i++) {
+        particlesRef.current.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          size: Math.random() * 1.5 + 1,
+        });
+      }
+    }
+
+    const onMouseMove = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
+    const onMouseLeave = () => { mouseRef.current = { x: null, y: null }; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseleave', onMouseLeave);
+    window.addEventListener('resize', resize);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const particles = particlesRef.current;
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        if (mx !== null && my !== null) {
+          const dx = p.x - mx;
+          const dy = p.y - my;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 100) {
+            const force = (100 - dist) / 100;
+            p.vx += (dx / dist) * force * 0.3;
+            p.vy += (dy / dist) * force * 0.3;
+          }
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.99;
+        p.vy *= 0.99;
+
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        p.x = Math.max(0, Math.min(canvas.width, p.x));
+        p.y = Math.max(0, Math.min(canvas.height, p.y));
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(212, 168, 67, 0.6)';
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const q = particles[j];
+          const ddx = p.x - q.x;
+          const ddy = p.y - q.y;
+          const d = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (d < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(212, 168, 67, ${0.08 * (1 - d / 120)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    animRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseleave', onMouseLeave);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="particle-canvas" />;
+}
+
+/* ═══ MOCKUP STACK (hero visual) ═══ */
+function MockupStack() {
   return (
-    <svg viewBox="0 0 380 280" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="20" y="30" width="340" height="220" rx="16" fill="#1A1714" stroke="#D4A843" strokeWidth="1.5" opacity="0.8"/>
-      <rect x="20" y="30" width="340" height="220" rx="16" fill="url(#cassGrad)" opacity="0.3"/>
-      <rect x="60" y="60" width="260" height="100" rx="10" fill="#0F0D0B" stroke="rgba(212,168,67,0.25)" strokeWidth="1"/>
-      <g className="reel-spin" style={{ transformOrigin: '130px 110px' }}>
-        <circle cx="130" cy="110" r="32" fill="none" stroke="#D4A843" strokeWidth="1" opacity="0.4"/>
-        <circle cx="130" cy="110" r="16" fill="none" stroke="#D4A843" strokeWidth="0.8" opacity="0.25"/>
-        <circle cx="130" cy="110" r="5" fill="#D4A843" opacity="0.5"/>
-      </g>
-      <g className="reel-spin" style={{ transformOrigin: '250px 110px', animationDelay: '-3s' }}>
-        <circle cx="250" cy="110" r="32" fill="none" stroke="#D4A843" strokeWidth="1" opacity="0.4"/>
-        <circle cx="250" cy="110" r="16" fill="none" stroke="#D4A843" strokeWidth="0.8" opacity="0.25"/>
-        <circle cx="250" cy="110" r="5" fill="#D4A843" opacity="0.5"/>
-      </g>
-      <path d="M162 110 C175 95, 205 95, 218 110" stroke="#D4A843" strokeWidth="0.8" fill="none" opacity="0.2"/>
-      <rect x="120" y="180" width="140" height="40" rx="6" fill="#242018" stroke="rgba(212,168,67,0.2)" strokeWidth="1"/>
-      <text x="190" y="205" textAnchor="middle" fill="#D4A843" fontSize="12" fontFamily="IBM Plex Mono" opacity="0.6">STATIFY VOL.1</text>
-      <circle cx="44" cy="226" r="5" fill="#0F0D0B" stroke="rgba(212,168,67,0.15)" strokeWidth="1"/>
-      <circle cx="336" cy="226" r="5" fill="#0F0D0B" stroke="rgba(212,168,67,0.15)" strokeWidth="1"/>
-      <defs>
-        <linearGradient id="cassGrad" x1="20" y1="30" x2="360" y2="250" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D4A843" stopOpacity="0.05"/>
-          <stop offset="1" stopColor="#0F0D0B" stopOpacity="0"/>
-        </linearGradient>
-      </defs>
-    </svg>
+    <div className="mockup-stack">
+      {/* Back card — blurred heatmap preview */}
+      <div className="mockup-card mockup-card-back">
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>LISTENING YEAR</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2 }}>
+          {Array.from({ length: 84 }, (_, i) => (
+            <div key={i} style={{ width: '100%', aspectRatio: '1', borderRadius: 1, background: `rgba(212,168,67,${Math.random() * 0.6 + 0.05})` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Middle card — mini donut preview */}
+      <div className="mockup-card mockup-card-mid">
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-secondary)', letterSpacing: '0.1em', marginBottom: 8 }}>YOUR SOUND</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <svg viewBox="0 0 60 60" style={{ width: 60, height: 60 }}>
+            <circle cx="30" cy="30" r="22" fill="none" stroke="#D4A843" strokeWidth="6" strokeDasharray="44 94" transform="rotate(-90 30 30)" />
+            <circle cx="30" cy="30" r="22" fill="none" stroke="#4DBDB5" strokeWidth="6" strokeDasharray="28 110" strokeDashoffset="-44" transform="rotate(-90 30 30)" />
+            <circle cx="30" cy="30" r="22" fill="none" stroke="#C93333" strokeWidth="6" strokeDasharray="22 116" strokeDashoffset="-72" transform="rotate(-90 30 30)" />
+          </svg>
+          <div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-primary)' }}>Hip-Hop</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--gold)' }}>34%</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Front card — artist preview */}
+      <div className="mockup-card mockup-card-front">
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--gold)', letterSpacing: '0.1em', marginBottom: 6 }}>TOP ARTIST</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--text-primary)', lineHeight: 1, marginBottom: 8 }}>THE WEEKND</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: 'var(--gold)', fontWeight: 600 }}>12,847</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-secondary)' }}>MIN ON TAPE</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 20 }}>
+          {Array.from({ length: 20 }, (_, i) => (
+            <div key={i} style={{
+              width: 3, borderRadius: 1,
+              height: `${30 + Math.sin(i * 0.7) * 50 + Math.cos(i * 1.1) * 20}%`,
+              background: '#D4A843', opacity: 0.3,
+            }} />
+          ))}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--gold)', marginTop: 8, opacity: 0.5 }}>CH 01</div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ DUAL TICKER ═══ */
+function DualTicker() {
+  const row1 = ['TOP ARTISTS', 'TOP TRACKS', 'LISTENING TIME', 'GENRE MAP', 'YOUR RHYTHM'];
+  const row2 = ['STATIFY FM 93.7', 'NOW BROADCASTING', 'YOUR MUSIC IDENTITY', 'SIGNAL REPORT'];
+
+  return (
+    <div className="ticker-wrap">
+      <div className="ticker-row">
+        <div className="ticker-fade" />
+        <div className="ticker-track">
+          {[0, 1].map(s => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              {row1.map((t, i) => (
+                <span key={`${s}-${i}`} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <span className="ticker-item ticker-item-gold">{t}</span>
+                  <span className="ticker-sep">//</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="ticker-row">
+        <div className="ticker-fade" />
+        <div className="ticker-track-reverse">
+          {[0, 1].map(s => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              {row2.map((t, i) => (
+                <span key={`${s}-${i}`} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <span className="ticker-item ticker-item-teal">{t}</span>
+                  <span className="ticker-sep">//</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -71,20 +264,12 @@ function Navbar() {
   return (
     <>
       <nav className="nav">
-        <a href="/" className="nav-logo">
-          STATIFY
-        </a>
-
+        <a href="/" className="nav-logo">STATIFY</a>
         <div className="nav-links">
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#demo">Preview</a>
         </div>
-
-        <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '10px 22px', fontSize: 14, display: 'none' }} id="nav-cta-desktop">
-          Connect Spotify &#9654;
-        </button>
-        {/* Desktop CTA — visible on md+ */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={handleConnectSpotify} className="btn-gold hidden-mobile" style={{ padding: '10px 22px', fontSize: 14 }}>
             Connect Spotify &#9654;
@@ -94,7 +279,6 @@ function Navbar() {
           </button>
         </div>
       </nav>
-
       {open && (
         <div className="nav-mobile-menu">
           <a href="#how-it-works" onClick={() => setOpen(false)}>How It Works</a>
@@ -105,7 +289,6 @@ function Navbar() {
           </button>
         </div>
       )}
-
       <style>{`.hidden-mobile { display: inline-flex; } @media(max-width:768px) { .hidden-mobile { display: none !important; } }`}</style>
     </>
   );
@@ -115,69 +298,46 @@ function Navbar() {
 function HeroSection() {
   return (
     <section className="hero">
-      {/* Background blobs */}
+      {/* Gradient blobs */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
         <div style={{ position: 'absolute', width: '50%', height: '50%', top: '5%', right: '0%', background: 'radial-gradient(ellipse, rgba(212,168,67,0.06) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', width: '50%', height: '50%', bottom: '10%', left: '0%', background: 'radial-gradient(ellipse, rgba(77,189,181,0.04) 0%, transparent 70%)' }} />
       </div>
 
-      <div className="hero-inner" style={{ position: 'relative', zIndex: 1 }}>
+      <ParticleCanvas />
+
+      <div className="hero-inner" style={{ position: 'relative', zIndex: 2 }}>
         <div className="hero-text">
-          <div className="hero-eyebrow anim-1">✦ NOW BROADCASTING</div>
-          <h1 className="hero-h1 anim-2">
-            YOUR MUSIC.<br />
-            <span className="gold">RECORDED.</span>
-          </h1>
-          <p className="hero-sub anim-3">
-            Tune into your Spotify stats. See your top artists, tracks, and listening time — beautifully visualized.
-          </p>
-          <div className="hero-ctas anim-4">
-            <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '14px 32px' }}>
-              &#9654; Connect Spotify
-            </button>
-            <a href="#demo" className="btn-ghost" style={{ padding: '14px 32px' }}>
-              View Demo <ArrowRight size={16} />
-            </a>
+          <div className="hero-eyebrow">✦ NOW BROADCASTING</div>
+          <h1 className="hero-h1">YOUR MUSIC.<br /><span className="gold">RECORDED.</span></h1>
+          <p className="hero-sub">Tune into your Spotify stats. See your top artists, tracks, and listening time — beautifully visualized.</p>
+          <div className="hero-ctas">
+            <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '14px 32px' }}>&#9654; Connect Spotify</button>
+            <a href="#demo" className="btn-ghost" style={{ padding: '14px 32px' }}>View Demo <ArrowRight size={16} /></a>
           </div>
-          <div className="anim-5" style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
-            {['Free to use', 'No password stored', '10k+ users'].map((t) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+            {['Free to use', 'No password stored', '10k+ users'].map(t => (
               <span key={t} style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>✦ {t}</span>
             ))}
           </div>
         </div>
-
-        <div className="hero-visual anim-6">
-          <CassetteSVG />
+        <div className="hero-visual">
+          <MockupStack />
         </div>
       </div>
 
-      {/* Ticker */}
-      <div className="ticker-bar" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5 }}>
-        <div className="ticker-fade" />
-        <div className="ticker-track">
-          {[0, 1].map((s) => (
-            <div key={s} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              {['STATIFY FM', '93.7', 'TOP ARTISTS', 'TOP TRACKS', 'LISTENING TIME', 'NOW BROADCASTING'].map((t, i) => (
-                <span key={`${s}-${i}`} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                  <span className="ticker-item">{t}</span>
-                  <span className="ticker-sep">//</span>
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      <DualTicker />
     </section>
   );
 }
 
-/* ═══ HOW IT WORKS — 3-column grid ═══ */
+/* ═══ HOW IT WORKS ═══ */
 function HowItWorks() {
   const reveal = useReveal();
   const steps = [
-    { num: '01', Icon: Plug, title: 'Connect', desc: 'Link your Spotify account with one click. We use secure OAuth — your password never touches our servers.' },
-    { num: '02', Icon: Waves, title: 'Analyze', desc: 'We process your listening data and surface your top artists, most-played tracks, and listening patterns.' },
-    { num: '03', Icon: Star, title: 'Discover', desc: 'Get a beautiful, detailed breakdown of your musical identity — explore your stats and share them.' },
+    { num: '01', Icon: CassetteIcon, title: 'Connect', desc: 'Link your Spotify account with one click. We use secure OAuth — your password never touches our servers.' },
+    { num: '02', Icon: RadioTowerIcon, title: 'Analyze', desc: 'We process your listening data and surface your top artists, most-played tracks, and listening patterns.' },
+    { num: '03', Icon: VinylIcon, title: 'Discover', desc: 'Get a beautiful, detailed breakdown of your musical identity — explore your stats and share them.' },
   ];
 
   return (
@@ -190,17 +350,23 @@ function HowItWorks() {
           </div>
 
           <div className="steps-grid">
+            {/* Connecting SVG line */}
+            <svg className="steps-connector" viewBox="0 0 100 2" preserveAspectRatio="none"
+              style={{ position: 'absolute', top: '50%', left: '10%', width: '80%', height: 2, zIndex: 0, overflow: 'visible' }}>
+              <line x1="0" y1="1" x2="100" y2="1" stroke="rgba(212,168,67,0.25)" strokeWidth="1" strokeDasharray="6 4">
+                {reveal.visible && (
+                  <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" fill="freeze" />
+                )}
+              </line>
+            </svg>
+
             {steps.map((step, i) => {
               const Icon = step.Icon;
               return (
-                <div key={i} className="card">
+                <div key={i} className="card" style={{ position: 'relative', zIndex: 1 }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--gold)', marginBottom: 16 }}>{step.num}</div>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 12, marginBottom: 20,
-                    background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.12)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon size={22} stroke="#D4A843" strokeWidth={1.5} />
+                  <div style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 20, background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon />
                   </div>
                   <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--text-primary)', marginBottom: 12 }}>{step.title}</h3>
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{step.desc}</p>
@@ -214,14 +380,16 @@ function HowItWorks() {
   );
 }
 
-/* ═══ FEATURES — 4-column grid ═══ */
-function FeaturesSection() {
+/* ═══ FEATURES SHOWCASE ═══ */
+function FeaturesShowcase() {
   const reveal = useReveal();
-  const features = [
-    { Icon: Music, title: 'Top Artists', desc: 'See who dominates your listening — ranked with visuals and play time.' },
-    { Icon: Disc3, title: 'Top Tracks', desc: 'Your most-played songs displayed like premium liner notes.' },
-    { Icon: Clock, title: 'Listening Stats', desc: 'Total minutes, unique artists, and track counts — all in one view.' },
-    { Icon: Headphones, title: 'Instant Results', desc: 'Connect once, get your full report in seconds. No setup needed.' },
+
+  const gradients = [
+    'linear-gradient(135deg, #D4A843, #8B5E15)',
+    'linear-gradient(135deg, #4DBDB5, #1A5E5A)',
+    'linear-gradient(135deg, #C93333, #5A0F0F)',
+    'linear-gradient(135deg, #7B6FA0, #2D1F5E)',
+    'linear-gradient(135deg, #5A8A6A, #1A3D25)',
   ];
 
   return (
@@ -233,23 +401,76 @@ function FeaturesSection() {
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 5vw, 56px)', color: 'var(--text-primary)' }}>EVERYTHING YOU NEED</h2>
           </div>
 
-          <div className="features-grid">
-            {features.map((f, i) => {
-              const Icon = f.Icon;
-              return (
-                <div key={i} className="card">
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 12, marginBottom: 20,
-                    background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.12)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon size={22} stroke="#D4A843" strokeWidth={1.5} />
+          {/* Block 1: Text left, Artist Grid right */}
+          <div className="feature-block">
+            <div className="feature-text">
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text-primary)', marginBottom: 16 }}>TOP ARTISTS</h3>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+                See who dominates your listening — ranked with rich portraits, play time, and colorful identity. Each artist gets their own signature gradient.
+              </p>
+              <button onClick={handleConnectSpotify} className="btn-ghost" style={{ padding: '12px 24px', fontSize: 13 }}>See Your Artists <ArrowRight size={14} /></button>
+            </div>
+            <div className="feature-visual">
+              <div className="mini-artist-grid">
+                {['#1', '#2', '#3', '#4', '#5'].map((rank, i) => (
+                  <div key={i} className="mini-artist-cell" style={{ background: gradients[i] }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>{rank}</span>
                   </div>
-                  <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 400, color: 'var(--text-primary)', marginBottom: 10 }}>{f.title}</h3>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{f.desc}</p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Block 2: Donut left, Text right */}
+          <div className="feature-block">
+            <div className="feature-text">
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text-primary)', marginBottom: 16 }}>GENRE BREAKDOWN</h3>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+                Discover your sonic DNA. We aggregate genres from your top 20 artists and visualize your music taste as a rich interactive chart.
+              </p>
+              <button onClick={handleConnectSpotify} className="btn-ghost" style={{ padding: '12px 24px', fontSize: 13 }}>Explore Genres <ArrowRight size={14} /></button>
+            </div>
+            <div className="feature-visual" style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', width: 200, height: 200 }}>
+                <svg viewBox="0 0 100 100" style={{ width: 200, height: 200, transform: 'rotate(-90deg)' }}>
+                  {[
+                    { pct: 34, color: '#D4A843', offset: 0 },
+                    { pct: 22, color: '#4DBDB5', offset: 34 },
+                    { pct: 18, color: '#C93333', offset: 56 },
+                    { pct: 14, color: '#7B6FA0', offset: 74 },
+                    { pct: 12, color: '#5A8A6A', offset: 88 },
+                  ].map((seg, i) => {
+                    const c = 2 * Math.PI * 38;
+                    const dash = (seg.pct / 100) * c;
+                    return <circle key={i} cx="50" cy="50" r="38" fill="none" stroke={seg.color} strokeWidth="10" strokeDasharray={`${dash} ${c - dash}`} strokeDashoffset={-(seg.offset / 100) * c} />;
+                  })}
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-primary)' }}>Hip-Hop</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--gold)', fontWeight: 600 }}>34%</span>
                 </div>
-              );
-            })}
+              </div>
+            </div>
+          </div>
+
+          {/* Block 3: Text left, Heatmap right */}
+          <div className="feature-block">
+            <div className="feature-text">
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--text-primary)', marginBottom: 16 }}>LISTENING HEATMAP</h3>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+                See your listening patterns over time. Every day lights up based on how much you listened — inspired by GitHub's contribution graph.
+              </p>
+              <button onClick={handleConnectSpotify} className="btn-ghost" style={{ padding: '12px 24px', fontSize: 13 }}>View Heatmap <ArrowRight size={14} /></button>
+            </div>
+            <div className="feature-visual">
+              <div className="mini-heatmap-grid">
+                {Array.from({ length: 84 }, (_, i) => {
+                  const intensities = [0.06, 0.15, 0.3, 0.5, 0.8];
+                  const intensity = intensities[Math.floor(Math.random() * intensities.length)];
+                  return <div key={i} className="mini-heat-square" style={{ background: `rgba(212,168,67,${intensity})` }} />;
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -257,22 +478,17 @@ function FeaturesSection() {
   );
 }
 
-/* ── Demo avatar with fallback when image fails (e.g. Drake pfp) ── */
+/* ═══ DEMO TOP 5 ═══ */
 function DemoAvatar({ name, img }: { name: string; img: string }) {
   const [failed, setFailed] = useState(false);
   const initial = name.charAt(0);
   const style = { width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' as const, border: '2px solid rgba(212,168,67,0.2)', flexShrink: 0 };
-  if (failed) {
-    return (
-      <div style={{ ...style, background: 'rgba(212,168,67,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)' }}>
-        {initial}
-      </div>
-    );
-  }
+  if (failed) return (
+    <div style={{ ...style, background: 'rgba(212,168,67,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--gold)' }}>{initial}</div>
+  );
   return <img src={img} alt={name} style={style} referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-/* ═══ DEMO TOP 5 — Tape Dashboard Preview ═══ */
 function DemoSection() {
   const reveal = useReveal();
   const demoArtists = [
@@ -295,38 +511,22 @@ function DemoSection() {
             </p>
           </div>
 
-          {/* Tape card */}
-          <div style={{
-            background: '#1A1714', borderRadius: 24, padding: '32px 28px', maxWidth: 800, margin: '0 auto',
-            border: '1px solid rgba(212,168,67,0.2)', boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,168,67,0.08)',
-          }}>
-            {/* Tape header */}
+          <div style={{ background: 'var(--surface)', borderRadius: 24, padding: '32px 28px', maxWidth: 800, margin: '0 auto', border: '1px solid rgba(212,168,67,0.2)', boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,168,67,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, padding: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--gold)' }}>STATIFY FM</span>
-              </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(237,227,208,0.3)' }}>SIDE A // 2024</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--gold)' }}>STATIFY FM</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(237,227,208,0.3)' }}>SIDE A // 2025</span>
             </div>
 
-            {/* Reel window */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, padding: '16px 0', marginBottom: 24,
-              borderRadius: 12, background: '#0F0D0B', border: '1px solid rgba(212,168,67,0.08)',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, padding: '16px 0', marginBottom: 24, borderRadius: 12, background: 'var(--bg)', border: '1px solid rgba(212,168,67,0.08)' }}>
               <div className="reel-spin" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(212,168,67,0.3)', borderTopColor: 'var(--gold)' }} />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)', letterSpacing: '0.15em' }}>▶ PLAYING</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)', letterSpacing: '0.15em' }}>&#9654; PLAYING</span>
               <div className="reel-spin" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid rgba(212,168,67,0.3)', borderTopColor: 'var(--gold)', animationDelay: '-2s' }} />
             </div>
 
-            {/* Artist rows */}
-            {demoArtists.map((a) => (
-              <div key={a.rank} style={{
-                display: 'flex', alignItems: 'center', gap: 16, padding: '12px 8px', borderRadius: 10,
-                transition: 'background 0.15s ease',
-              }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
+            {demoArtists.map(a => (
+              <div key={a.rank} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 8px', borderRadius: 10, transition: 'background 0.15s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: 'rgba(212,168,67,0.2)', width: 40, textAlign: 'center', flexShrink: 0 }}>
                   {String(a.rank).padStart(2, '0')}
                 </span>
@@ -340,7 +540,6 @@ function DemoSection() {
               </div>
             ))}
 
-            {/* Bottom label */}
             <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(212,168,67,0.08)' }}>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(237,227,208,0.25)', letterSpacing: '0.15em' }}>
                 RECORDED FROM SPOTIFY BROADCAST // STATIFY BROADCASTING CO.
@@ -349,12 +548,69 @@ function DemoSection() {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '14px 32px', fontSize: 15 }}>
-              &#9654; See Your Real Stats
-            </button>
+            <button onClick={handleConnectSpotify} className="btn-gold" style={{ padding: '14px 32px', fontSize: 15 }}>&#9654; See Your Real Stats</button>
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+/* ═══ SOCIAL PROOF — TUNE IN TOGETHER ═══ */
+function SocialProof() {
+  const reveal = useReveal();
+  const friends = [
+    { name: 'Alex M.', artist: 'Drake', compat: 87, color: '#D4A843' },
+    { name: 'Sam K.', artist: 'Billie Eilish', compat: 72, color: '#4DBDB5' },
+    { name: 'Jordan P.', artist: 'Tyler, The Creator', compat: 64, color: '#C93333' },
+    { name: 'Taylor R.', artist: 'SZA', compat: 91, color: '#7B6FA0' },
+  ];
+
+  const CompatRing = ({ pct, color }: { pct: number; color: string }) => {
+    const r = 18; const c = 2 * Math.PI * r; const dash = (pct / 100) * c;
+    return (
+      <svg width="44" height="44" viewBox="0 0 44 44" style={{ flexShrink: 0 }}>
+        <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(212,168,67,0.1)" strokeWidth="3" />
+        <circle cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="3" strokeDasharray={`${dash} ${c - dash}`} strokeLinecap="round" transform="rotate(-90 22 22)" />
+        <text x="22" y="22" textAnchor="middle" dominantBaseline="central" fill={color} fontSize="10" fontFamily="'IBM Plex Mono', monospace" fontWeight="600">{pct}%</text>
+      </svg>
+    );
+  };
+
+  return (
+    <section style={{ padding: '100px 0', backgroundColor: 'var(--bg)' }}>
+      <div className="container">
+        <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+            <div>
+              <div className="section-eyebrow">COMMUNITY</div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 5vw, 48px)', color: 'var(--text-primary)', marginBottom: 16 }}>TUNE IN TOGETHER</h2>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 24 }}>
+                Share your broadcast with friends. Compare your top artists, see who's listening to the same tracks, and discover music through each other's taste.
+              </p>
+              <a href="#" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--gold)', textDecoration: 'none' }}>→ Share your profile</a>
+            </div>
+            <div className="friend-grid">
+              {friends.map((f, i) => (
+                <div key={i} className="friend-card" style={{ borderTop: `2px solid ${f.color}` }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${f.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 16, color: f.color, flexShrink: 0 }}>
+                    {f.name.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-primary)' }}>{f.name}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>♪ {f.artist}</div>
+                  </div>
+                  <CompatRing pct={f.compat} color={f.color} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)', opacity: 0.6 }}>See how it works →</span>
+          </div>
+        </div>
+      </div>
+      <style>{`@media(max-width:768px) { .friend-grid { grid-template-columns: 1fr; } }`}</style>
     </section>
   );
 }
@@ -365,7 +621,7 @@ function SignalBar() {
   return (
     <div ref={reveal.ref} className={`reveal ${reveal.visible ? 'visible' : ''}`}
       style={{ padding: '48px 0', backgroundColor: 'var(--surface-2)', borderTop: '1px solid var(--gold-border)', borderBottom: '1px solid var(--gold-border)' }}>
-      <div className="container" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '40px' }}>
+      <div className="container" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 40 }}>
         {[
           { v: '10,000+', l: 'Listeners Tuned In' },
           { v: '50M+', l: 'Minutes Analyzed' },
@@ -395,19 +651,19 @@ function Footer() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--gold)', letterSpacing: '0.15em', marginBottom: 16 }}>NAVIGATION</div>
-            {['How It Works', 'Features', 'Dashboard'].map((l) => (
+            {['How It Works', 'Features', 'Dashboard'].map(l => (
               <a key={l} href="#" style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, textDecoration: 'none' }}>{l}</a>
             ))}
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--gold)', letterSpacing: '0.15em', marginBottom: 16 }}>LEGAL</div>
-            {['Privacy Policy', 'Terms of Service', 'Contact'].map((l) => (
+            {['Privacy Policy', 'Terms of Service', 'Contact'].map(l => (
               <a key={l} href="#" style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, textDecoration: 'none' }}>{l}</a>
             ))}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 24, borderTop: '1px solid var(--gold-border)' }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)' }}>&copy; 2024 Statify Broadcasting Co.</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-secondary)' }}>&copy; 2025 Statify Broadcasting Co.</span>
           <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(122,110,96,0.5)' }}>All frequencies reserved.</span>
         </div>
       </div>
@@ -418,12 +674,13 @@ function Footer() {
 /* ═══ LANDING PAGE ROOT ═══ */
 export function LandingPage() {
   return (
-    <div style={{ backgroundColor: '#0F0D0B', color: '#EDE3D0' }}>
+    <div style={{ backgroundColor: 'var(--bg)', color: 'var(--text-primary)' }}>
       <Navbar />
       <HeroSection />
       <HowItWorks />
-      <FeaturesSection />
+      <FeaturesShowcase />
       <DemoSection />
+      <SocialProof />
       <SignalBar />
       <Footer />
     </div>
