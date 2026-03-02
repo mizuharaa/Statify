@@ -1,10 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const querystring = require('querystring');
 
-require('dotenv').config({ path: path.join(__dirname, '../configs.env') });
+// Only load configs.env for local dev; production uses Railway env vars (never override existing)
+const configPath = path.join(__dirname, '../configs.env');
+if (fs.existsSync(configPath)) {
+  require('dotenv').config({ path: configPath, override: false });
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,7 +37,36 @@ const generateRandomString = (length) => {
   return text;
 };
 
-const stateStore = new Map();
+/** Stateless OAuth state: HMAC-signed, includes frontend URL for correct redirect (works across Railway instances) */
+function createState(frontendUrl) {
+  const random = generateRandomString(32);
+  const timestamp = Date.now().toString();
+  const payload = random + '|' + timestamp + '|' + (frontendUrl || '');
+  const sig = crypto.createHmac('sha256', CLIENT_SECRET).update(payload).digest('base64url');
+  return Buffer.from(payload).toString('base64url') + '.' + sig;
+}
+
+function verifyAndExtractState(state) {
+  if (!state || typeof state !== 'string') return null;
+  const dot = state.indexOf('.');
+  if (dot <= 0) return null;
+  const payloadB64 = state.slice(0, dot);
+  const sig = state.slice(dot + 1);
+  try {
+    const payload = Buffer.from(payloadB64, 'base64url').toString();
+    const parts = payload.split('|');
+    const [random, ts, frontendUrl] = parts;
+    if (!random || !ts) return null;
+    const age = Date.now() - parseInt(ts, 10);
+    if (age > 600000 || age < 0) return null; // 10 min max
+    const expected = crypto.createHmac('sha256', CLIENT_SECRET).update(payload).digest('base64url');
+    if (sig.length !== expected.length) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'utf8'), Buffer.from(expected, 'utf8'))) return null;
+    return frontendUrl || null;
+  } catch {
+    return null;
+  }
+}
 
 const SCOPES = [
   'user-top-read',
@@ -46,9 +81,31 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'Statify backend is running' });
 });
 
+// Debug: verify what redirect URI Spotify will receive (add this exact URI to Spotify Dashboard)
+app.get('/api/debug', (req, res) => {
+  res.json({
+    redirectUri: REDIRECT_URI,
+    frontendUrl: FRONTEND_URL,
+    hint: 'Add this exact redirectUri to Spotify Dashboard > Settings > Redirect URIs',
+  });
+});
+
+function getFrontendUrlFromRequest(req) {
+  const origin = req.get('Origin') || req.get('Referer');
+  if (origin) {
+    try {
+      const u = new URL(origin);
+      if (u.protocol === 'https:' || (u.hostname === 'localhost' && u.protocol === 'http:')) {
+        return u.origin;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  return null;
+}
+
 app.get('/api/auth/login', (req, res) => {
-  const state = generateRandomString(16);
-  stateStore.set(state, true);
+  const frontendUrl = getFrontendUrlFromRequest(req) || FRONTEND_URL;
+  const state = createState(frontendUrl);
 
   const authUrl = 'https://accounts.spotify.com/authorize?' +
     querystring.stringify({
@@ -66,14 +123,15 @@ app.get('/api/auth/login', (req, res) => {
 app.get('/api/auth/callback', async (req, res) => {
   const code = req.query.code || null;
   const state = req.query.state || null;
+  const extracted = verifyAndExtractState(state);
+  const frontendUrl = extracted || FRONTEND_URL;
 
-  if (!state || !stateStore.has(state)) {
-    return res.redirect(`${FRONTEND_URL}/?error=state_mismatch`);
+  if (!extracted) {
+    return res.redirect(`${frontendUrl}/?error=state_mismatch`);
   }
-  stateStore.delete(state);
 
   if (!code) {
-    return res.redirect(`${FRONTEND_URL}/?error=missing_code`);
+    return res.redirect(`${frontendUrl}/?error=missing_code`);
   }
 
   try {
@@ -88,10 +146,10 @@ app.get('/api/auth/callback', async (req, res) => {
       }
     );
     const { access_token, refresh_token } = tokenResponse.data;
-    res.redirect(`${FRONTEND_URL}/callback?access_token=${access_token}&refresh_token=${refresh_token}`);
+    res.redirect(`${frontendUrl}/callback?access_token=${access_token}&refresh_token=${refresh_token}`);
   } catch (error) {
     console.error('Token exchange failed:', error.response?.data || error.message);
-    res.redirect(`${FRONTEND_URL}/?error=token_exchange_failed`);
+    res.redirect(`${frontendUrl}/?error=token_exchange_failed`);
   }
 });
 
